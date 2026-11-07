@@ -31,6 +31,7 @@ const account = {
   name: 'Budi Santoso',
   phone: '81234567890',
   password: 'kata-sandi-aman',
+  passwordConfirmation: 'kata-sandi-aman',
   terms: true,
 }
 

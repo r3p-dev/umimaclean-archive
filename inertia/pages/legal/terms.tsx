@@ -15,6 +15,7 @@ export default function Terms({ store }: { store: Store }) {
         <h2>Pemesanan dan penjemputan</h2>
         <ul>
           <li>Penjemputan gratis hanya untuk alamat di area layanan yang tertera di situs.</li>
+          <li>Helm tidak dijemput. Cuci helm hanya untuk helm yang dibawa langsung ke toko.</li>
           <li>
             Jadwal jemput dipilih per jam (slot). Slot yang sudah penuh tidak bisa dipilih. Kurir
             menghubungi lewat WhatsApp sebelum datang.
@@ -34,7 +35,7 @@ export default function Terms({ store }: { store: Store }) {
           </li>
           <li>
             Tagihan dikirim lewat WhatsApp. Pencucian dimulai setelah tagihan dibayar dengan QRIS
-            (online) atau di kasir toko (QRIS, tunai, atau EDC).
+            (online) atau di kasir toko (QRIS atau tunai).
           </li>
           <li>Kode QRIS berlaku 15 menit. Bila habis, buat kode baru dari halaman pembayaran.</li>
         </ul>

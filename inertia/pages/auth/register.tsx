@@ -15,22 +15,24 @@ import { customerLinks } from '~/lib/navigation/customer_links'
 import { useTurnstile } from '~/lib/shared/turnstile'
 import { nameError, passwordError, phoneError } from '~/lib/shared/validation'
 
-type Field = 'name' | 'phone' | 'password' | 'terms' | 'turnstile'
+type Field = 'name' | 'phone' | 'password' | 'passwordConfirmation' | 'terms' | 'turnstile'
 type Errors = Partial<Record<Field, string>>
 
-const ORDER = ['name', 'phone', 'password', 'terms'] as const
+const ORDER = ['name', 'phone', 'password', 'passwordConfirmation', 'terms'] as const
 
 export default function Register() {
   const turnstile = useTurnstile()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
   const [hasAcceptedTerms, setTerms] = useState(false)
   const [errors, setErrors] = useState<Errors>({})
   const [isBusy, setBusy] = useState(false)
   const nameRef = useRef<HTMLInputElement>(null)
   const phoneRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
+  const confirmationRef = useRef<HTMLInputElement>(null)
 
   function clear(field: Field) {
     if (errors[field]) {
@@ -46,6 +48,8 @@ export default function Register() {
       phoneRef.current?.focus()
     } else if (first === 'password') {
       passwordRef.current?.focus()
+    } else if (first === 'passwordConfirmation') {
+      confirmationRef.current?.focus()
     }
   }
 
@@ -65,6 +69,9 @@ export default function Register() {
         found[field as Field] = problem
       }
     }
+    if (!found.password && confirmation !== password) {
+      found.passwordConfirmation = 'Kata sandi tidak sama.'
+    }
     if (!hasAcceptedTerms) {
       found.terms = 'Setujui syarat & ketentuan untuk mendaftar.'
     }
@@ -78,7 +85,14 @@ export default function Register() {
 
     router.post(
       urlFor('auth.register.store'),
-      { name, phone, password, terms: hasAcceptedTerms, turnstile: turnstile.token },
+      {
+        name,
+        phone,
+        password,
+        passwordConfirmation: confirmation,
+        terms: hasAcceptedTerms,
+        turnstile: turnstile.token,
+      },
       {
         preserveScroll: true,
         onStart: () => setBusy(true),
@@ -157,6 +171,24 @@ export default function Register() {
             <FieldError id="register-password-error">{errors.password}</FieldError>
           ) : (
             <FieldDescription id="register-password-help">Minimal 8 karakter.</FieldDescription>
+          )}
+        </Field>
+        <Field className="mt-4.5">
+          <FieldLabel htmlFor="register-confirmation">Ulangi kata sandi</FieldLabel>
+          <PasswordInput
+            ref={confirmationRef}
+            id="register-confirmation"
+            autoComplete="new-password"
+            value={confirmation}
+            onChange={(value) => {
+              setConfirmation(value)
+              clear('passwordConfirmation')
+            }}
+            isInvalid={!!errors.passwordConfirmation}
+            describedBy={errors.passwordConfirmation ? 'register-confirmation-error' : undefined}
+          />
+          {errors.passwordConfirmation && (
+            <FieldError id="register-confirmation-error">{errors.passwordConfirmation}</FieldError>
           )}
         </Field>
         <div className="mt-3">

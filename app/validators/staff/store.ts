@@ -7,6 +7,8 @@ import { phoneField } from '#validators/shared/rules/phone'
 import { itemsRule } from '#validators/shared/rules/pickup'
 import { proofPhoto } from '#validators/staff/task'
 
+const MAX_INTAKE_PHOTOS = 3
+
 const itemCount = () => vine.number().withoutDecimals().range([0, MAX_ITEMS_PER_KIND])
 
 export const walkInValidator = vine.create({
@@ -20,16 +22,12 @@ export const walkInValidator = vine.create({
     .object({ lat: vine.number().range([-90, 90]), lng: vine.number().range([-180, 180]) })
     .optional(),
   note: vine.string().trim().maxLength(300).optional(),
+  photos: vine.array(proofPhoto()).minLength(1).maxLength(MAX_INTAKE_PHOTOS),
 })
 
 export type WalkInPayload = Infer<typeof walkInValidator>
 
 export const counterPaymentValidator = vine.create({
-  method: vine.enum([PaymentMethod.CASH, PaymentMethod.CARD]),
+  method: vine.enum([PaymentMethod.CASH]),
   cashReceived: vine.number().withoutDecimals().min(0).max(100_000_000).optional(),
-  reference: vine.string().trim().minLength(4).maxLength(40).optional(),
-})
-
-export const intakePhotosValidator = vine.create({
-  photos: vine.array(proofPhoto()).minLength(1).maxLength(3),
 })

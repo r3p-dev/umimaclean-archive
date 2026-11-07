@@ -99,10 +99,36 @@ export default class MidtransGateway {
       signal: AbortSignal.timeout(10000),
     })
     const body = (await response.json()) as MidtransResponse
+    logger.info(this.#reply('status', orderId, response, body), 'Midtrans status reply')
     if (String(body.status_code) === '404') {
       return null
     }
+    if (!body.transaction_status) {
+      throw new Error(`Midtrans status failed: ${body.status_message ?? response.status}`)
+    }
     return midtransStatus(body)
+  }
+
+  async cancelTransaction(orderId: string): Promise<ProviderStatus> {
+    const response = await fetch(`${this.#baseUrl()}/v2/${encodeURIComponent(orderId)}/cancel`, {
+      method: 'POST',
+      headers: this.#headers(),
+      signal: AbortSignal.timeout(10000),
+    })
+    const body = (await response.json()) as MidtransResponse
+    logger.info(this.#reply('cancel', orderId, response, body), 'Midtrans cancel reply')
+    return midtransStatus({ ...body, order_id: body.order_id ?? orderId })
+  }
+
+  #reply(call: string, orderId: string, response: Response, body: MidtransResponse) {
+    return {
+      call,
+      orderId,
+      httpStatus: response.status,
+      statusCode: body.status_code,
+      statusMessage: body.status_message,
+      transactionStatus: body.transaction_status,
+    }
   }
 
   verifySignature(notification: ProviderStatus) {

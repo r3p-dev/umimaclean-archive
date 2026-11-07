@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Head, router } from '@inertiajs/react'
-import { IconClipboardCheck, IconPlus, IconPrinter } from '@tabler/icons-react'
+import { IconClipboardCheck, IconPlus } from '@tabler/icons-react'
 import { urlFor } from '~/client'
 import SourceTag from '~/components/atoms/source_tag'
 import ToneBadge from '~/components/atoms/tone_badge'
@@ -10,7 +10,7 @@ import InspectionItemCard from '~/components/organisms/processing/inspection_ite
 import StaffMissingOrder from '~/components/organisms/staff_missing_order'
 import StaffTopBar from '~/components/organisms/staff_top_bar'
 import StaffLayout from '~/components/templates/staff_layout'
-import { Button, LinkButton } from '~/components/ui/button'
+import { Button } from '~/components/ui/button'
 import { Card, CardContent } from '~/components/ui/card'
 import type { Catalog } from '~/lib/processing/catalog'
 import {
@@ -18,6 +18,7 @@ import {
   ITEM_KINDS,
   inspectionPayload,
   inspectionSummary,
+  previewBill,
   type InspectionItem,
   type InspectionOrder,
 } from '~/lib/processing/inspection'
@@ -54,7 +55,7 @@ export default function Inspection({
   const isLocked = order.isSaved || needsStart
   const total = formatRupiah(order.isSaved ? order.total : summary.total)
   const savedText = isInStore
-    ? `Tersimpan · total ${total}. Lanjutkan ke pembayaran di kasir: QRIS, tunai, atau EDC.`
+    ? `Tersimpan · total ${total}. Lanjutkan ke pembayaran di kasir: QRIS atau tunai.`
     : `Tersimpan · total ${total}. Tagihan dikirim ke WhatsApp ${order.customer}. Pesanan masuk Dalam Pencucian setelah lunas.`
   const next = isInStore
     ? {
@@ -117,17 +118,6 @@ export default function Inspection({
           currentClassName="bg-status-periksa-dot"
           className="grid-cols-5"
         />
-        {order.canPrintIntake && (
-          <LinkButton
-            variant="outline"
-            size="desktop"
-            className="self-start"
-            href={urlFor('staff.print.intake', { id: orderId })}
-          >
-            <IconPrinter />
-            Cetak tanda terima
-          </LinkButton>
-        )}
         {needsStart && (
           <Button
             size="cta"
@@ -219,28 +209,24 @@ export default function Inspection({
                 <span className="text-note font-semibold text-foreground-secondary">
                   Barang tidak sesuai perkiraan?
                 </span>
-                {ITEM_KINDS.map(({ kind, label }) => (
-                  <Button
-                    key={kind}
-                    variant="outline"
-                    size="compact"
-                    onPress={() => addItem(kind, label)}
-                  >
-                    <IconPlus className="size-4.5" />
-                    {label}
-                  </Button>
-                ))}
+                {ITEM_KINDS.filter(({ kind }) => kind !== 'helmet' || order.canAddHelmet).map(
+                  ({ kind, label }) => (
+                    <Button
+                      key={kind}
+                      variant="outline"
+                      size="compact"
+                      onPress={() => addItem(kind, label)}
+                    >
+                      <IconPlus className="size-4.5" />
+                      {label}
+                    </Button>
+                  )
+                )}
               </div>
             )}
           </div>
           <BillSummaryCard
-            rows={summary.items.map((item) => ({
-              key: item.id,
-              title: `${item.label} · ${item.name || item.category}`,
-              subtotal: item.subtotal,
-              services: item.servicesText,
-            }))}
-            total={order.isSaved ? order.total : summary.total}
+            bill={order.bill ?? previewBill(summary, order.extras)}
             missing={isLocked ? 0 : summary.missing}
             isSaved={order.isSaved}
             savedText={savedText}

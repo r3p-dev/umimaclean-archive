@@ -16,6 +16,7 @@ function register(client: Parameters<typeof post>[0], overrides: Record<string, 
     name: 'Rina Kartika',
     phone: '0812 3456 7890',
     password: 'kata-sandi-aman',
+    passwordConfirmation: 'kata-sandi-aman',
     terms: true,
     turnstile: TURNSTILE_TOKEN,
     ...overrides,
@@ -91,6 +92,26 @@ test.group('Sign up with WhatsApp OTP', (group) => {
     response.assertBodyContains({
       errors: [{ field: 'name' }, { field: 'password' }, { field: 'terms' }],
     })
+  })
+
+  test('refuses a confirmation that does not match, on the confirmation field', async ({
+    client,
+    assert,
+  }) => {
+    const response = await register(client, { passwordConfirmation: 'kata-sandi-lain' })
+
+    response.assertStatus(422)
+    response.assertBodyContains({
+      errors: [
+        {
+          field: 'passwordConfirmation',
+          rule: 'confirmed',
+          message: 'Konfirmasi kata sandi tidak sama.',
+        },
+      ],
+    })
+    assert.lengthOf(state.fonnte.messages, 0)
+    assert.lengthOf(await OtpCode.all(), 0)
   })
 })
 

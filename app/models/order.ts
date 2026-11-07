@@ -1,4 +1,5 @@
 import { belongsTo, hasMany, hasOne, scope } from '@adonisjs/lucid/orm'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import type { ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 import type { BelongsTo, HasMany, HasOne } from '@adonisjs/lucid/types/relations'
 import { OrderSchema } from '#database/schema'
@@ -9,6 +10,10 @@ import {
   OrderSource,
   OrderStatus,
   OrderStatusStage,
+  OWNER_BULK_MOVES,
+  ReturnMethod,
+  STORE_ONLY_ITEM_KINDS,
+  type ItemKind,
 } from '#enums/order_enum'
 import { PaymentStatus } from '#enums/payment_enum'
 import { orderNumber } from '#helpers/order'
@@ -35,7 +40,9 @@ export default class Order extends OrderSchema {
     query
       .preload('events', (events) => events.preload('actor').orderBy('id', 'asc'))
       .preload('items', (items) => items.orderBy('position', 'asc'))
-      .preload('bill', (bill) => bill.preload('lines', (lines) => lines.orderBy('id', 'asc')))
+      .preload('bill', (bill) =>
+        bill.preload('lines', (lines) => lines.preload('service').orderBy('id', 'asc'))
+      )
       .preload('payments', (payments) => payments.orderBy('id', 'asc'))
       .preload('photos', (photos) => photos.preload('taker').orderBy('id', 'asc'))
   })
@@ -74,11 +81,20 @@ export default class Order extends OrderSchema {
       .preload('pickupAddress')
       .preload('deliveryAddress')
       .preload('items', (items) => items.orderBy('position', 'asc'))
-      .preload('bill', (bill) => bill.preload('lines').preload('decider'))
+      .preload('bill', (bill) =>
+        bill
+          .preload('lines', (lines) => lines.preload('service').orderBy('id', 'asc'))
+          .preload('decider')
+      )
       .preload('payments', (payments) => payments.preload('recorder').orderBy('id', 'asc'))
       .preload('photos', (photos) => photos.preload('taker').orderBy('id', 'asc'))
       .preload('events', (events) => events.preload('actor').orderBy('id', 'asc'))
       .first()
+  }
+
+  static async findActiveTrip(status: OrderStatus, transaction: TransactionClientContract) {
+    await transaction.rawQuery('select pg_advisory_xact_lock(hashtext(?))', [`trip:${status}`])
+    return Order.query({ client: transaction }).where('status', status).first()
   }
 
   @belongsTo(() => User)
@@ -122,10 +138,6 @@ export default class Order extends OrderSchema {
     return PACKED_STATUSES.includes(this.status)
   }
 
-  canPrintIntakeSlip() {
-    return this.source === OrderSource.STORE
-  }
-
   canPrintLabel() {
     return !!this.deliveryAddress && this.isPackedForDelivery()
   }
@@ -141,10 +153,19 @@ export default class Order extends OrderSchema {
     return ORDER_TRANSITIONS[this.status].includes(to)
   }
 
+  canHoldItem(kind: ItemKind) {
+    return this.source === OrderSource.STORE || !STORE_ONLY_ITEM_KINDS.includes(kind)
+  }
+
+  readyStatus() {
+    return this.returnMethod === ReturnMethod.STORE
+      ? OrderStatus.READY_FOR_COLLECTION
+      : OrderStatus.READY_FOR_DELIVERY
+  }
+
   ownerMoves() {
-    return ORDER_TRANSITIONS[this.status].filter(
-      (next) => next !== OrderStatus.IN_CLEANING && next !== OrderStatus.CANCELLED
-    )
+    const next = OWNER_BULK_MOVES[this.status]
+    return next ? [next] : []
   }
 
   ownerStages() {

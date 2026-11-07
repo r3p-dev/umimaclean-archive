@@ -2,6 +2,7 @@ import { BaseTransformer } from '@adonisjs/core/transformers'
 import { ItemKind, ItemKindLabel, OrderSource, OrderStatus, PhotoKind } from '#enums/order_enum'
 import { ServiceType } from '#enums/service_enum'
 import type Order from '#models/order'
+import { billBreakdown, billExtras } from '#helpers/bill'
 import { maskPhone } from '#helpers/phone'
 import { formatEvent, orderStatusLabel, photoUrl } from '#transformers/order_transformer'
 import { countLines, shortName } from '#transformers/task_transformer'
@@ -71,9 +72,11 @@ export default class InspectionTransformer extends BaseTransformer<Order> {
       estimate: countLines(order).join(', '),
       itemCount: order.itemCount(),
       customerNote: order.note || null,
-      canPrintIntake: order.canPrintIntakeSlip(),
+      canAddHelmet: order.canHoldItem(ItemKind.HELMET),
       isSaved,
       total: order.bill?.total ?? 0,
+      bill: isSaved ? billBreakdown(order) : null,
+      extras: billExtras(order),
       pickupPhoto: pickupPhoto ? photoUrl(pickupPhoto) : null,
       items,
     }

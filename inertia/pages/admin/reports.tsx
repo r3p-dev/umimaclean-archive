@@ -22,6 +22,7 @@ import { BulkBar, CHECK_CELL, SelectAllRow } from '~/components/organisms/data_t
 import { CostFormDialog, DeleteCostDialog } from '~/components/organisms/reports/cost_dialogs'
 import PaymentMixCard from '~/components/organisms/reports/payment_mix_card'
 import PeriodTabs from '~/components/organisms/reports/period_tabs'
+import ReceivedMoneyCard from '~/components/organisms/reports/received_money_card'
 import AdminLayout from '~/components/templates/admin_layout'
 import type { Sheet } from '~/lib/export/xlsx'
 import {
@@ -37,7 +38,9 @@ import {
   delta,
   detailRows,
   dataRange,
+  moneyRows,
   paymentMix,
+  receivedMoney,
   reportPeriod,
   type PeriodKey,
   type ReportData,
@@ -63,6 +66,8 @@ export default function AdminReports({ report, costs }: { report: ReportData; co
   const current = period.current
   const previous = period.previous
   const mix = paymentMix(current)
+  const money = receivedMoney(current)
+  const previousMoney = receivedMoney(previous)
   const detail = detailRows(period.days)
   const unit = detail.isDaily ? 'hari' : 'minggu'
   const table = useDataTable<DetailRow>(
@@ -74,6 +79,7 @@ export default function AdminReports({ report, costs }: { report: ReportData; co
   const cost = costShare(total, period.length)
   const hasCost = costList.length > 0
   const transactionsDelta = delta(current.transactions, previous.transactions)
+  const moneySheetRows = moneyRows(money, previousMoney)
   const detailTitle = detail.isDaily ? 'Rincian per hari' : 'Rincian per minggu'
 
   const detailSheet = (rows: DetailRow[]): Sheet => ({
@@ -155,6 +161,7 @@ export default function AdminReports({ report, costs }: { report: ReportData; co
                     ['Rata-rata per pesanan', current.average, previous.average],
                     [`Biaya operasional (porsi ${cost.share}/30 hari)`, cost.amount, null],
                     ['Laba bersih', hasCost ? current.revenue - cost.amount : null, null],
+                    ...moneySheetRows,
                   ],
                 },
                 {
@@ -247,6 +254,7 @@ export default function AdminReports({ report, costs }: { report: ReportData; co
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
           <div className="flex min-w-0 flex-col gap-4">
             <PaymentMixCard mix={mix} />
+            <ReceivedMoneyCard money={money} />
             <Card>
               <CardHeader className="border-b">
                 <CardTitle as="h2">{detailTitle}</CardTitle>

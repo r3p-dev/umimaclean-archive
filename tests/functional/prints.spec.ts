@@ -92,7 +92,7 @@ test.group('Staff print documents', (group) => {
     await deliverTo(order)
     await bill(order, staff, true)
 
-    for (const path of ['tanda-terima', 'label', 'struk']) {
+    for (const path of ['label', 'struk']) {
       const url = `/staf/cetak/${order.id}/${path}`
       const asCustomer = await client.get(url).loginAs(customer).redirects(0)
       asCustomer.assertHeader('location', '/beranda')
@@ -103,35 +103,12 @@ test.group('Staff print documents', (group) => {
     }
   })
 
-  test('the intake slip shows the drop-off without the full phone', async ({ client, assert }) => {
-    const staff = await UserFactory.apply('staff').merge({ name: 'Dedi Supriadi' }).create()
+  test('there is no intake slip (tanda terima) any more', async ({ client }) => {
+    const staff = await UserFactory.apply('staff').create()
     const order = await walkIn(staff)
 
-    const response = await inertia(client, `/staf/cetak/${order.id}/tanda-terima`).loginAs(staff)
-    response.assertInertiaComponent('staff/print/intake')
-    const { slip, store } = response.inertiaProps as {
-      slip: Record<string, unknown>
-      store: Record<string, unknown>
-    }
-    assert.equal(slip.number, order.number())
-    assert.equal(slip.staff, 'Dedi')
-    assert.equal(slip.phone, '+62 815-••••-0817')
-    assert.deepEqual(slip.items, ['Sepatu ×2', 'Tas ×1'])
-    assert.equal(slip.note, 'Tali sepatu kiri lepas')
-    assert.isNull(slip.delivery)
-    assert.isFalse(slip.isCancelled)
-    assert.include(String(slip.link), `/pesanan/${order.id}`)
-    assert.properties(store, ['name', 'address', 'whatsapp', 'hours'])
-    assert.notInclude(response.text(), '81563290817')
-    assert.notInclude(response.text(), '6329')
-
-    await order.merge({ status: OrderStatus.CANCELLED }).save()
-    const cancelled = await inertia(client, `/staf/cetak/${order.id}/tanda-terima`).loginAs(staff)
-    assert.isTrue((cancelled.inertiaProps as { slip: { isCancelled: boolean } }).slip.isCancelled)
-
-    const online = await OrderFactory.merge({ source: OrderSource.ONLINE }).create()
-    const refused = await inertia(client, `/staf/cetak/${online.id}/tanda-terima`).loginAs(staff)
-    refused.assertStatus(404)
+    const response = await client.get(`/staf/cetak/${order.id}/tanda-terima`).loginAs(staff)
+    response.assertStatus(404)
   })
 
   test('the delivery label uses the delivery snapshot recipient', async ({ client, assert }) => {
@@ -217,15 +194,11 @@ test.group('Staff print documents', (group) => {
     const collected = await walkIn(staff, { status: OrderStatus.COMPLETED })
     await bill(collected, staff, true)
     assert.include(await wash(collected), { canPrintLabel: false, canPrintReceipt: true })
-    assert.include(await flags(`/staf/proses/${collected.id}/periksa`, 'order'), {
-      canPrintIntake: true,
-    })
-    const photo = await inertia(client, `/staf/foto?untuk=intake&pesanan=${collected.id}`).loginAs(
-      staff
-    )
-    assert.isTrue((photo.inertiaProps as { canPrintIntake: boolean }).canPrintIntake)
-    assert.include(await flags(`/staf/proses/${online.id}/periksa`, 'order'), {
-      canPrintIntake: false,
+    const unpaid = await walkIn(staff, { status: OrderStatus.AWAITING_PAYMENT })
+    await bill(unpaid, staff, false)
+    const counter = await inertia(client, `/staf/transaksi/${unpaid.id}/bayar`).loginAs(staff)
+    assert.include((counter.inertiaProps as { order: Record<string, unknown> }).order, {
+      isPaid: false,
     })
 
     const cancelled = await walkIn(staff, { status: OrderStatus.READY_FOR_DELIVERY })

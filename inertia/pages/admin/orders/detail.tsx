@@ -21,6 +21,7 @@ import AdminPageHeader from '~/components/organisms/admin_page_header'
 import { CancelDialog } from '~/components/organisms/orders/bulk_order_dialogs'
 import CustomerHistoryDialog from '~/components/organisms/orders/customer_history_dialog'
 import PaymentFixDialog from '~/components/organisms/orders/payment_fix_dialog'
+import BillItems from '~/components/organisms/payment/bill_items'
 import AdminLayout from '~/components/templates/admin_layout'
 import { DETAIL_CANCEL_REASONS, adminOrders, type AdminOrderRow } from '~/lib/orders/admin_orders'
 import { MONTH_SHORT } from '~/lib/shared/date'
@@ -78,10 +79,6 @@ export default function AdminOrderDetail({
 
   const detail = order.detail
   const isCancelled = order.stage === 'batal'
-  const itemsTotal = detail.items.reduce(
-    (sum, item) => sum + item.services.reduce((total, service) => total + service.price, 0),
-    0
-  )
   const since = history.at(-1)?.date
   const historySummary = `${since ? `Pelanggan sejak ${MONTH_SHORT[since.getMonth()]} ${since.getFullYear()} · ` : ''}${history.length} pesanan · ${formatRupiah(history.reduce((sum, item) => sum + item.total, 0))} total tagihan.`
   const paymentTone = isCancelled ? 'batal' : detail.isPaid ? 'ok' : order.total ? 'bayar' : 'off'
@@ -149,45 +146,12 @@ export default function AdminOrderDetail({
               </CardAction>
             </CardHeader>
             <CardContent>
-              {detail.items.length ? (
-                <>
-                  <ul className="divide-y divide-border">
-                    {detail.items.map((item, index) => (
-                      <li
-                        key={`${item.name}-${index}`}
-                        className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0"
-                      >
-                        <div className="flex items-baseline gap-2">
-                          <span className="flex-1 text-md font-semibold">{item.name}</span>
-                          <span className="text-caption leading-none text-muted-foreground">
-                            {item.category}
-                          </span>
-                        </div>
-                        {item.services.map((service) => (
-                          <div
-                            key={service.name}
-                            className="flex justify-between text-sm text-foreground-secondary"
-                          >
-                            <span>{service.name}</span>
-                            <span className="tabular-nums">{formatRupiah(service.price)}</span>
-                          </div>
-                        ))}
-                        <div className="flex justify-between text-sm font-semibold">
-                          <span>Subtotal</span>
-                          <span>
-                            {formatRupiah(
-                              item.services.reduce((sum, service) => sum + service.price, 0)
-                            )}
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="flex justify-between border-t border-input pt-3 text-base font-bold">
-                    <span>Total</span>
-                    <span>{formatRupiah(itemsTotal)}</span>
-                  </div>
-                </>
+              {detail.bill ? (
+                <BillItems
+                  items={detail.bill.items}
+                  extras={detail.bill.extras}
+                  total={detail.bill.total}
+                />
               ) : (
                 <p className="text-foreground-secondary">
                   {order.total

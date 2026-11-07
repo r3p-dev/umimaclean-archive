@@ -60,7 +60,9 @@ router
 router
   .group(() => {
     router.get('/pesanan/:id', [controllers.customer.Orders, 'show']).as('orders.show')
-    router.get('/pesanan/:id/tagihan', [controllers.customer.Orders, 'bill']).as('orders.bill')
+    router
+      .get('/pesanan/:id/tagihan', [controllers.customer.Orders, 'oldBill'])
+      .as('orders.old_bill')
     router.get('/pesanan/:id/struk', [controllers.customer.Orders, 'receipt']).as('orders.receipt')
     router.post('/pesanan/:id/buka', [controllers.customer.Orders, 'unlock']).as('orders.unlock')
   })

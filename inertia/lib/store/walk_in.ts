@@ -18,13 +18,16 @@ export type KnownCustomer = {
 
 export type CustomerLookup = { phone: string; match: KnownCustomer | null } | null
 
+export type IntakeShot = { photo: string; stamp: string }
+
+export const MAX_INTAKE_PHOTOS = 3
+
 export const WALK_IN_STEPS = [
   { label: '1 Pelanggan', done: true },
-  { label: '2 Barang diterima', done: true },
+  { label: '2 Barang & foto', done: true },
   { label: '3 Pengembalian', done: true },
-  { label: '4 Foto barang', done: false },
-  { label: '5 Periksa & layanan', done: false },
-  { label: '6 Bayar (QRIS · Tunai · EDC)', done: false },
+  { label: '4 Periksa & layanan', done: false },
+  { label: '5 Bayar (QRIS · Tunai)', done: false },
 ]
 
 export const RETURN_OPTIONS: {
@@ -72,6 +75,7 @@ type WalkInDraft = {
   useSaved: boolean
   address: string
   point: PickupPoint | null
+  photoCount: number
 }
 
 export function walkInBlocker(draft: WalkInDraft, lookup: CustomerLookup) {
@@ -93,6 +97,9 @@ export function walkInBlocker(draft: WalkInDraft, lookup: CustomerLookup) {
   }
   if (totalItems(draft.items) === 0) {
     return 'Tambahkan minimal 1 barang.'
+  }
+  if (draft.photoCount === 0) {
+    return 'Ambil minimal 1 foto barang.'
   }
   if (draft.returnMethod === 'antar' && !draft.useSaved && !draft.address.trim()) {
     return 'Isi alamat dan titik antar di peta.'

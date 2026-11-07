@@ -9,8 +9,10 @@ export type Day = {
   online: number
   storeQris: number
   cash: number
-  edc: number
   store: number
+  refundDue: number
+  mismatch: number
+  refunded: number
 }
 
 export type PeriodKey = '7' | '30' | 'bulan' | 'custom'
@@ -30,23 +32,40 @@ export type DayRow = [
   online: number,
   storeQris: number,
   cash: number,
-  edc: number,
+  refundDue: number,
+  mismatch: number,
+  refunded: number,
 ]
 
 export type ReportData = { start: string; end: string; days: DayRow[] }
 
 function reportDays(data: ReportData): Day[] {
-  return data.days.map(([date, revenue, transactions, items, online, storeQris, cash, edc]) => ({
-    date: fromIso(date),
-    revenue,
-    transactions,
-    items,
-    online,
-    storeQris,
-    cash,
-    edc,
-    store: storeQris + cash + edc,
-  }))
+  return data.days.map(
+    ([
+      date,
+      revenue,
+      transactions,
+      items,
+      online,
+      storeQris,
+      cash,
+      refundDue,
+      mismatch,
+      refunded,
+    ]) => ({
+      date: fromIso(date),
+      revenue,
+      transactions,
+      items,
+      online,
+      storeQris,
+      cash,
+      store: storeQris + cash,
+      refundDue,
+      mismatch,
+      refunded,
+    })
+  )
 }
 
 export function dataRange(data: ReportData) {
@@ -74,8 +93,10 @@ function totals(days: Day[]): Totals {
     online: sum('online'),
     storeQris: sum('storeQris'),
     cash: sum('cash'),
-    edc: sum('edc'),
     store: sum('store'),
+    refundDue: sum('refundDue'),
+    mismatch: sum('mismatch'),
+    refunded: sum('refunded'),
     average: transactions ? Math.round(revenue / transactions) : 0,
   }
 }
@@ -163,7 +184,6 @@ export function paymentMix(current: Totals) {
       ['QRIS (online)', 'ONLINE', current.online, false],
       ['QRIS (offline)', 'OFFLINE · TOKO', current.storeQris, true],
       ['Tunai di toko', 'OFFLINE · TOKO', current.cash, true],
-      ['EDC di toko', 'OFFLINE · TOKO', current.edc, true],
     ] as const
   ).map(([label, tag, amount, isInStore]) => {
     const share = Math.round((amount / base) * 100)
@@ -179,6 +199,44 @@ export function paymentMix(current: Totals) {
 }
 
 export type MixRow = ReturnType<typeof paymentMix>[number]
+
+export function receivedMoney(current: Totals) {
+  const total = current.revenue + current.refundDue + current.mismatch + current.refunded
+  return {
+    rows: [
+      { label: 'Lunas (omzet)', hint: 'pembayaran pesanan', amount: current.revenue },
+      {
+        label: 'Perlu dikembalikan',
+        hint: 'QRIS masuk setelah pesanan lunas',
+        amount: current.refundDue,
+      },
+      {
+        label: 'Nominal tidak cocok',
+        hint: 'belum diputuskan di Rekonsiliasi',
+        amount: current.mismatch,
+      },
+      { label: 'Sudah dikembalikan', hint: 'dana keluar lagi', amount: current.refunded },
+    ],
+    total,
+    net: total - current.refunded,
+  }
+}
+
+type Money = ReturnType<typeof receivedMoney>
+
+export function moneyRows(current: Money, previous: Money): [string, number, number][] {
+  return [
+    ...current.rows
+      .slice(1)
+      .map((row, index): [string, number, number] => [
+        row.label,
+        row.amount,
+        previous.rows[index + 1].amount,
+      ]),
+    ['Total uang masuk', current.total, previous.total],
+    ['Bersih (diterima − dikembalikan)', current.net, previous.net],
+  ]
+}
 
 export function revenueAxis(days: Day[]) {
   const max = Math.max(1, ...days.map((day) => day.revenue))

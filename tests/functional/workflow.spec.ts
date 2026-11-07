@@ -2,12 +2,13 @@ import { test } from '@japa/runner'
 import type { ApiClient } from '@japa/api-client'
 import { DateTime } from 'luxon'
 import { UserFactory } from '#database/factories/user_factory'
-import { OrderStatus } from '#enums/order_enum'
+import { OrderStatus, PhotoKind } from '#enums/order_enum'
 import { PaymentStatus } from '#enums/payment_enum'
 import ActivityLog from '#models/activity_log'
 import Bill from '#models/bill'
 import Order from '#models/order'
 import OrderEvent from '#models/order_event'
+import OrderPhoto from '#models/order_photo'
 import Payment from '#models/payment'
 import Service from '#models/service'
 import type User from '#models/user'
@@ -19,6 +20,7 @@ import {
   inertia,
   orderPayload,
   post,
+  postWalkIn,
   savedAddress,
   seedCatalogue,
   useApp,
@@ -400,28 +402,63 @@ test.group('Payments', (group) => {
     page.assertInertiaPropsContains({ order: { payment: { change: 25000 } } })
   })
 
+  test('a walk-in is refused without item photos taken at intake', async ({ client, assert }) => {
+    const staff = await UserFactory.apply('staff').create()
+    const body = {
+      phone: '0812 7777 8888',
+      name: 'Andi Pratama',
+      items: { sepatu: 1, tas: 0, helm: 0 },
+      returnMethod: 'store',
+    }
+
+    const refused = await postWalkIn(client, body, 0).loginAs(staff)
+    refused.assertStatus(422)
+    refused.assertBodyContains({ errors: [{ field: 'photos' }] })
+    const tooMany = await postWalkIn(client, body, 4).loginAs(staff)
+    tooMany.assertStatus(422)
+    assert.lengthOf(await Order.all(), 0)
+
+    await postWalkIn(client, body, 3).loginAs(staff)
+    const order = await Order.firstOrFail()
+    assert.lengthOf(await OrderPhoto.query().where('order_id', order.id), 3)
+    const log = await ActivityLog.query()
+      .where('order_id', order.id)
+      .where('action', 'items_photographed')
+      .firstOrFail()
+    assert.equal(log.detail, '3 foto barang diterima')
+  })
+
   test('a walk-in becomes a real store order and gets its tracking link', async ({
     client,
     assert,
   }) => {
     const staff = await UserFactory.apply('staff').create()
-    const created = await post(client, '/staf/transaksi', {
-      phone: '0812 7777 8888',
-      name: 'Andi Pratama',
-      items: { sepatu: 1, tas: 0, helm: 0 },
-      returnMethod: 'store',
-    }).loginAs(staff)
+    const created = await postWalkIn(
+      client,
+      {
+        phone: '0812 7777 8888',
+        name: 'Andi Pratama',
+        items: { sepatu: 1, tas: 0, helm: 0 },
+        returnMethod: 'store',
+      },
+      2
+    ).loginAs(staff)
     const order = await Order.firstOrFail()
-    created.assertHeader('location', `/staf/foto?untuk=intake&pesanan=${order.id}`)
+    created.assertHeader('location', `/staf/proses/${order.id}/periksa`)
     assert.equal(order.source, 'store')
     assert.equal(order.status, OrderStatus.IN_INSPECTION)
     assert.equal(order.customerPhone, '6281277778888')
+    const photos = await OrderPhoto.query().where('order_id', order.id)
+    assert.deepEqual(
+      photos.map((photo) => photo.kind),
+      [PhotoKind.INTAKE, PhotoKind.INTAKE]
+    )
 
     await Bill.create({ orderId: order.id, total: 45000, decidedBy: staff.id })
     await order.merge({ status: OrderStatus.AWAITING_PAYMENT }).save()
     await post(client, `/staf/transaksi/${order.id}/bayar`, {
-      method: 'card',
-      reference: 'APR12345',
+      method: 'cash',
+      cashReceived: 50000,
     }).loginAs(staff)
     const sent = state.fonnte.messages.filter((message) => message.target === '6281277778888')
     assert.lengthOf(sent, 1)

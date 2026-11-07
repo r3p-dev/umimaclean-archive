@@ -1,7 +1,6 @@
+import type { BillBreakdown } from '#helpers/bill'
 import { formatRupiah } from '#helpers/money'
 import env from '#start/env'
-
-type BillTextLine = { item: string; services: string[]; total: number }
 
 function greeting(customerName: string) {
   return `Halo ${customerName.split(' ')[0] || 'Kak'},`
@@ -27,23 +26,30 @@ export function courierOnTheWayText(values: {
 export function billText(values: {
   customerName: string
   number: string
-  lines: BillTextLine[]
-  total: number
+  bill: BillBreakdown
   link: string
   isWalkIn: boolean
 }) {
-  const lines = values.lines.map(
-    (line) => `- ${line.item}: ${line.services.join(' + ')} ${formatRupiah(line.total)}`
+  const items = values.bill.items.map((item, index) =>
+    [
+      `${index + 1}. ${item.name} (${item.kind})`,
+      ...(item.main ? [`   ${item.main.name}: ${formatRupiah(item.main.price)}`] : []),
+      ...item.addons.map((addon) => `   + ${addon.name}: ${formatRupiah(addon.price)}`),
+      `   Subtotal: ${formatRupiah(item.subtotal)}`,
+    ].join('\n')
+  )
+  const extras = values.bill.extras.map(
+    (extra) => `${extra.label}: ${extra.amount ? formatRupiah(extra.amount) : 'Gratis'}`
   )
   const footer = values.isWalkIn
     ? `Rincian: ${values.link}`
     : `Rincian dan pembayaran: ${values.link}`
   return [
     `${greeting(values.customerName)} barang pesanan ${values.number} sudah diperiksa.`,
-    ...lines,
-    `Total ${formatRupiah(values.total)}`,
+    items.join('\n\n'),
+    [...extras, `Total: ${formatRupiah(values.bill.total)}`].join('\n'),
     footer,
-  ].join('\n')
+  ].join('\n\n')
 }
 
 export function paymentReminderText(values: {

@@ -11,7 +11,6 @@ import type AdminOrderDetailTransformer from '#transformers/admin_order_detail_t
 import type AdminOrderTransformer from '#transformers/admin_order_transformer'
 import type DeliveryLabelTransformer from '#transformers/delivery_label_transformer'
 import type InspectionTransformer from '#transformers/inspection_transformer'
-import type IntakeSlipTransformer from '#transformers/intake_slip_transformer'
 import type OrderTransformer from '#transformers/order_transformer'
 import type PlaceTransformer from '#transformers/place_transformer'
 import type ProcessRowTransformer from '#transformers/process_row_transformer'
@@ -44,10 +43,6 @@ export namespace Data {
   export type Inspection = InferData<InspectionTransformer>
   export namespace Inspection {
     export type Variants = InferVariants<InspectionTransformer>
-  }
-  export type IntakeSlip = InferData<IntakeSlipTransformer>
-  export namespace IntakeSlip {
-    export type Variants = InferVariants<IntakeSlipTransformer>
   }
   export type Order = InferData<OrderTransformer>
   export namespace Order {

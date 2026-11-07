@@ -475,7 +475,7 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/customer/orders_controller').default['show']>>>
     }
   }
-  'customer.orders.bill': {
+  'customer.orders.old_bill': {
     methods: ["GET","HEAD"]
     pattern: '/pesanan/:id/tagihan'
     types: {
@@ -483,8 +483,8 @@ export interface Registry {
       paramsTuple: [ParamValue]
       params: { id: ParamValue }
       query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/customer/orders_controller').default['bill']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/customer/orders_controller').default['bill']>>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/customer/orders_controller').default['oldBill']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/customer/orders_controller').default['oldBill']>>>
     }
   }
   'customer.orders.receipt': {
@@ -799,42 +799,6 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff/store_controller').default['checkQris']>>>
     }
   }
-  'staff.walk_in.photos': {
-    methods: ["POST"]
-    pattern: '/staf/transaksi/:id/foto'
-    types: {
-      body: ExtractBody<InferInput<(typeof import('#validators/staff/store').intakePhotosValidator)>>
-      paramsTuple: [ParamValue]
-      params: { id: ParamValue }
-      query: ExtractQuery<InferInput<(typeof import('#validators/staff/store').intakePhotosValidator)>>
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff/store_controller').default['storePhotos']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff/store_controller').default['storePhotos']>>> | { status: 422; response: { errors: SimpleError[] } }
-    }
-  }
-  'staff.photo': {
-    methods: ["GET","HEAD"]
-    pattern: '/staf/foto'
-    types: {
-      body: {}
-      paramsTuple: []
-      params: {}
-      query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff/store_controller').default['photo']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff/store_controller').default['photo']>>>
-    }
-  }
-  'staff.print.intake': {
-    methods: ["GET","HEAD"]
-    pattern: '/staf/cetak/:id/tanda-terima'
-    types: {
-      body: {}
-      paramsTuple: [ParamValue]
-      params: { id: ParamValue }
-      query: {}
-      response: ExtractResponse<Awaited<ReturnType<import('#controllers/staff/prints_controller').default['intake']>>>
-      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/staff/prints_controller').default['intake']>>>
-    }
-  }
   'staff.print.label': {
     methods: ["GET","HEAD"]
     pattern: '/staf/cetak/:id/label'
@@ -1085,6 +1049,54 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/reconciliation_controller').default['refresh']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/reconciliation_controller').default['refresh']>>>
+    }
+  }
+  'admin.reconciliation.refunded': {
+    methods: ["POST"]
+    pattern: '/admin/rekonsiliasi/:id/dikembalikan'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/admin/reconciliation').reviewPaymentValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/admin/reconciliation').reviewPaymentValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/reconciliation_controller').default['refunded']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/reconciliation_controller').default['refunded']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.reconciliation.mismatch': {
+    methods: ["POST"]
+    pattern: '/admin/rekonsiliasi/:id/nominal'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/admin/reconciliation').resolveMismatchValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/admin/reconciliation').resolveMismatchValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/reconciliation_controller').default['mismatch']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/reconciliation_controller').default['mismatch']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'admin.reconciliation.recheck': {
+    methods: ["POST"]
+    pattern: '/admin/rekonsiliasi/:id/cek-ulang'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/reconciliation_controller').default['recheck']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/reconciliation_controller').default['recheck']>>>
+    }
+  }
+  'admin.reconciliation.handled': {
+    methods: ["POST"]
+    pattern: '/admin/rekonsiliasi/:id/ditangani'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/admin/reconciliation').reviewPaymentValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/admin/reconciliation').reviewPaymentValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/admin/reconciliation_controller').default['handled']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/admin/reconciliation_controller').default['handled']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
   'admin.reports': {

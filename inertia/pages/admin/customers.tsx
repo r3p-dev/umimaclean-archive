@@ -113,6 +113,7 @@ export default function AdminCustomers({
                 { label: 'Hari tidak aktif', type: 'int', width: 14 },
                 { label: 'Total pesanan', type: 'int', width: 13 },
                 { label: 'Total belanja', type: 'rp', width: 14 },
+                { label: 'Dana perlu dicek', type: 'rp', width: 16 },
                 { label: 'Segmen', width: 22 },
               ],
               rows: list.map((row) => [
@@ -124,6 +125,7 @@ export default function AdminCustomers({
                 row.days,
                 row.orders,
                 row.spend,
+                row.held,
                 segmentLabel(row, days),
               ]),
             },
@@ -274,6 +276,11 @@ export default function AdminCustomers({
                       </TableCell>
                       <TableCell className="py-2 text-right tabular-nums">
                         {formatRupiah(row.spend)}
+                        {row.held > 0 && (
+                          <span className="block text-caption text-destructive-text">
+                            {formatRupiah(row.held)} perlu dicek
+                          </span>
+                        )}
                       </TableCell>
                     </TableRow>
                   )
@@ -306,6 +313,11 @@ export default function AdminCustomers({
                     <p className="text-meta leading-[1.4] text-foreground-secondary">
                       {row.orders} pesanan · {formatRupiah(row.spend)} · {row.area}
                     </p>
+                    {row.held > 0 && (
+                      <p className="text-meta leading-[1.4] text-destructive-text">
+                        {formatRupiah(row.held)} perlu dicek di Rekonsiliasi
+                      </p>
+                    )}
                   </div>
                 </li>
               )

@@ -240,11 +240,11 @@ const routes = {
     tokens: [{"old":"/pesanan/:id","type":0,"val":"pesanan","end":""},{"old":"/pesanan/:id","type":1,"val":"id","end":""}],
     types: placeholder as Registry['customer.orders.show']['types'],
   },
-  'customer.orders.bill': {
+  'customer.orders.old_bill': {
     methods: ["GET","HEAD"],
     pattern: '/pesanan/:id/tagihan',
     tokens: [{"old":"/pesanan/:id/tagihan","type":0,"val":"pesanan","end":""},{"old":"/pesanan/:id/tagihan","type":1,"val":"id","end":""},{"old":"/pesanan/:id/tagihan","type":0,"val":"tagihan","end":""}],
-    types: placeholder as Registry['customer.orders.bill']['types'],
+    types: placeholder as Registry['customer.orders.old_bill']['types'],
   },
   'customer.orders.receipt': {
     methods: ["GET","HEAD"],
@@ -402,24 +402,6 @@ const routes = {
     tokens: [{"old":"/staf/transaksi/:id/qris/cek","type":0,"val":"staf","end":""},{"old":"/staf/transaksi/:id/qris/cek","type":0,"val":"transaksi","end":""},{"old":"/staf/transaksi/:id/qris/cek","type":1,"val":"id","end":""},{"old":"/staf/transaksi/:id/qris/cek","type":0,"val":"qris","end":""},{"old":"/staf/transaksi/:id/qris/cek","type":0,"val":"cek","end":""}],
     types: placeholder as Registry['staff.store_payment.qris_check']['types'],
   },
-  'staff.walk_in.photos': {
-    methods: ["POST"],
-    pattern: '/staf/transaksi/:id/foto',
-    tokens: [{"old":"/staf/transaksi/:id/foto","type":0,"val":"staf","end":""},{"old":"/staf/transaksi/:id/foto","type":0,"val":"transaksi","end":""},{"old":"/staf/transaksi/:id/foto","type":1,"val":"id","end":""},{"old":"/staf/transaksi/:id/foto","type":0,"val":"foto","end":""}],
-    types: placeholder as Registry['staff.walk_in.photos']['types'],
-  },
-  'staff.photo': {
-    methods: ["GET","HEAD"],
-    pattern: '/staf/foto',
-    tokens: [{"old":"/staf/foto","type":0,"val":"staf","end":""},{"old":"/staf/foto","type":0,"val":"foto","end":""}],
-    types: placeholder as Registry['staff.photo']['types'],
-  },
-  'staff.print.intake': {
-    methods: ["GET","HEAD"],
-    pattern: '/staf/cetak/:id/tanda-terima',
-    tokens: [{"old":"/staf/cetak/:id/tanda-terima","type":0,"val":"staf","end":""},{"old":"/staf/cetak/:id/tanda-terima","type":0,"val":"cetak","end":""},{"old":"/staf/cetak/:id/tanda-terima","type":1,"val":"id","end":""},{"old":"/staf/cetak/:id/tanda-terima","type":0,"val":"tanda-terima","end":""}],
-    types: placeholder as Registry['staff.print.intake']['types'],
-  },
   'staff.print.label': {
     methods: ["GET","HEAD"],
     pattern: '/staf/cetak/:id/label',
@@ -545,6 +527,30 @@ const routes = {
     pattern: '/admin/rekonsiliasi/:id/cek',
     tokens: [{"old":"/admin/rekonsiliasi/:id/cek","type":0,"val":"admin","end":""},{"old":"/admin/rekonsiliasi/:id/cek","type":0,"val":"rekonsiliasi","end":""},{"old":"/admin/rekonsiliasi/:id/cek","type":1,"val":"id","end":""},{"old":"/admin/rekonsiliasi/:id/cek","type":0,"val":"cek","end":""}],
     types: placeholder as Registry['admin.reconciliation.refresh']['types'],
+  },
+  'admin.reconciliation.refunded': {
+    methods: ["POST"],
+    pattern: '/admin/rekonsiliasi/:id/dikembalikan',
+    tokens: [{"old":"/admin/rekonsiliasi/:id/dikembalikan","type":0,"val":"admin","end":""},{"old":"/admin/rekonsiliasi/:id/dikembalikan","type":0,"val":"rekonsiliasi","end":""},{"old":"/admin/rekonsiliasi/:id/dikembalikan","type":1,"val":"id","end":""},{"old":"/admin/rekonsiliasi/:id/dikembalikan","type":0,"val":"dikembalikan","end":""}],
+    types: placeholder as Registry['admin.reconciliation.refunded']['types'],
+  },
+  'admin.reconciliation.mismatch': {
+    methods: ["POST"],
+    pattern: '/admin/rekonsiliasi/:id/nominal',
+    tokens: [{"old":"/admin/rekonsiliasi/:id/nominal","type":0,"val":"admin","end":""},{"old":"/admin/rekonsiliasi/:id/nominal","type":0,"val":"rekonsiliasi","end":""},{"old":"/admin/rekonsiliasi/:id/nominal","type":1,"val":"id","end":""},{"old":"/admin/rekonsiliasi/:id/nominal","type":0,"val":"nominal","end":""}],
+    types: placeholder as Registry['admin.reconciliation.mismatch']['types'],
+  },
+  'admin.reconciliation.recheck': {
+    methods: ["POST"],
+    pattern: '/admin/rekonsiliasi/:id/cek-ulang',
+    tokens: [{"old":"/admin/rekonsiliasi/:id/cek-ulang","type":0,"val":"admin","end":""},{"old":"/admin/rekonsiliasi/:id/cek-ulang","type":0,"val":"rekonsiliasi","end":""},{"old":"/admin/rekonsiliasi/:id/cek-ulang","type":1,"val":"id","end":""},{"old":"/admin/rekonsiliasi/:id/cek-ulang","type":0,"val":"cek-ulang","end":""}],
+    types: placeholder as Registry['admin.reconciliation.recheck']['types'],
+  },
+  'admin.reconciliation.handled': {
+    methods: ["POST"],
+    pattern: '/admin/rekonsiliasi/:id/ditangani',
+    tokens: [{"old":"/admin/rekonsiliasi/:id/ditangani","type":0,"val":"admin","end":""},{"old":"/admin/rekonsiliasi/:id/ditangani","type":0,"val":"rekonsiliasi","end":""},{"old":"/admin/rekonsiliasi/:id/ditangani","type":1,"val":"id","end":""},{"old":"/admin/rekonsiliasi/:id/ditangani","type":0,"val":"ditangani","end":""}],
+    types: placeholder as Registry['admin.reconciliation.handled']['types'],
   },
   'admin.reports': {
     methods: ["GET","HEAD"],

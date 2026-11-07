@@ -5,7 +5,7 @@ import db from '@adonisjs/lucid/services/db'
 import type { ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 import { DateTime } from 'luxon'
 import { ActivityAction } from '#enums/activity_enum'
-import { OrderSource, OrderStatus, PhotoKind, ReturnMethod } from '#enums/order_enum'
+import { OrderSource, OrderStatus, PhotoKind } from '#enums/order_enum'
 import ActivityLog from '#models/activity_log'
 import Order from '#models/order'
 import OrderItem from '#models/order_item'
@@ -381,16 +381,15 @@ export default class TaskService {
 
   async startTrip(user: User, id: number, kind: TripKind) {
     const trip = TRIP[kind]
-    const current = await this.#activeTrip(kind)
-    if (current && current.id !== id) {
-      throw fieldError(
-        'form',
-        `Selesaikan atau lewati dulu tugas ${current.number()}.`,
-        'task.busy'
-      )
-    }
-
     return db.transaction(async (transaction) => {
+      const current = await Order.findActiveTrip(trip.active, transaction)
+      if (current && current.id !== id) {
+        throw fieldError(
+          'form',
+          `Selesaikan atau lewati dulu tugas ${current.number()}.`,
+          'task.busy'
+        )
+      }
       const locked = await this.orders.lockOrder(transaction, id)
       await this.orders.transitionOrder(
         locked,
@@ -510,17 +509,10 @@ export default class TaskService {
         throw fieldError('form', 'Pesanan ini tidak sedang dicuci.', 'order.status')
       }
       await OrderPhoto.storePhoto(photo, locked, PhotoKind.WASHING, user, transaction)
-      await OrderItem.query({ client: transaction })
-        .where('order_id', locked.id)
-        .whereNull('washed_at')
-        .update({ washed_at: DateTime.now().toJSDate() })
-      const next =
-        locked.returnMethod === ReturnMethod.STORE
-          ? OrderStatus.READY_FOR_COLLECTION
-          : OrderStatus.READY_FOR_DELIVERY
+      await OrderItem.markWashed(locked.id, transaction)
       await this.orders.transitionOrder(
         locked,
-        next,
+        locked.readyStatus(),
         { actor: user, action: ActivityAction.WASH_DONE, detail: 'Foto hasil cuci' },
         transaction
       )

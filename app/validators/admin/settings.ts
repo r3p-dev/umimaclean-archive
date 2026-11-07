@@ -17,7 +17,7 @@ export const saveStoreSettingsValidator = vine.create({
       })
     )
     .fixedLength(3),
-  payments: vine.object({ qris: vine.boolean(), cash: vine.boolean(), edc: vine.boolean() }),
+  payments: vine.object({ qris: vine.boolean(), cash: vine.boolean() }),
   inactiveDays: vine.number().withoutDecimals().range([7, 365]),
 })
 

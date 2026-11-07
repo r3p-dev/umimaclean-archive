@@ -66,7 +66,7 @@ export default function SiteFooter() {
               <Logo />
             </Link>
             <p className="max-w-80 text-sm leading-normal text-pretty text-foreground-secondary">
-              Cuci sepatu, tas, dan helm dengan antar-jemput di Bandung Raya.
+              Cuci sepatu dan tas dengan antar-jemput di Bandung Raya. Helm dicuci langsung di toko.
             </p>
             <ul className="flex flex-col text-meta text-foreground-secondary">
               <ContactLine

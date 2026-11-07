@@ -93,7 +93,14 @@ export class FakeTurnstile extends TurnstileService {
 export class FakeMidtrans extends MidtransGateway {
   isAvailable = true
   charges: ChargeInput[] = []
+  cancels: string[] = []
+  statusChecks: string[] = []
+  cancelReply: (Partial<ProviderStatus> & { statusMessage?: string }) | 'unreachable' = {
+    statusCode: '200',
+    transactionStatus: 'cancel',
+  }
   providerStatus: ProviderStatus | null = null
+  isStatusUnreachable = false
 
   override isConfigured() {
     return this.isAvailable
@@ -104,8 +111,20 @@ export class FakeMidtrans extends MidtransGateway {
     return { transactionId: `tx-${input.orderId}`, qrUrl: `https://qr.test/${input.orderId}.png` }
   }
 
-  override async fetchTransactionStatus() {
+  override async fetchTransactionStatus(orderId: string) {
+    this.statusChecks.push(orderId)
+    if (this.isStatusUnreachable) {
+      throw new Error('Midtrans status unreachable')
+    }
     return this.providerStatus
+  }
+
+  override async cancelTransaction(orderId: string) {
+    this.cancels.push(orderId)
+    if (this.cancelReply === 'unreachable') {
+      throw new Error('Midtrans cancel unreachable')
+    }
+    return { orderId, grossAmount: '', statusCode: '', transactionStatus: '', ...this.cancelReply }
   }
 
   override verifySignature(notification: ProviderStatus) {
@@ -182,6 +201,30 @@ export function post(client: ApiClient, url: string, body: object = {}, session:
   return send(client, 'post', url, body, session)
 }
 
+function formFields(value: unknown, prefix: string): [string, string][] {
+  if (value !== null && typeof value === 'object') {
+    return Object.entries(value).flatMap(([key, nested]) =>
+      formFields(nested, prefix ? `${prefix}[${key}]` : key)
+    )
+  }
+  return [[prefix, typeof value === 'boolean' ? (value ? '1' : '0') : String(value)]]
+}
+
+export function postWalkIn(client: ApiClient, body: object, photos = 1) {
+  const request = client
+    .post('/staf/transaksi')
+    .withCsrfToken()
+    .header('accept', 'application/json')
+    .redirects(0)
+  for (const [name, value] of formFields(body, '')) {
+    request.field(name, value)
+  }
+  for (let index = 0; index < photos; index++) {
+    request.file(`photos[${index}]`, PNG_PIXEL, { filename: `barang-${index + 1}.png` })
+  }
+  return request
+}
+
 export function inertia(client: ApiClient, url: string, session: SessionData = {}) {
   return client.get(url).withSession(session).withInertia().redirects(0)
 }
@@ -197,7 +240,7 @@ export function nextPickupDate() {
 export function orderPayload(pickupAddressId: number, overrides: Record<string, unknown> = {}) {
   return {
     key: randomUUID(),
-    items: { sepatu: 2, tas: 0, helm: 1 },
+    items: { sepatu: 2, tas: 1, helm: 0 },
     note: 'Noda kopi',
     date: nextPickupDate(),
     slot: 1,

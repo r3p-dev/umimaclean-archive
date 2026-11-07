@@ -12,7 +12,12 @@ type PriceEntry = {
   description: string
 }
 
-export type PriceGroup = { label: string; main: PriceEntry[]; addons: PriceEntry[] }
+export type PriceGroup = {
+  label: string
+  isStoreOnly: boolean
+  main: PriceEntry[]
+  addons: PriceEntry[]
+}
 
 function PriceRow({ entry }: { entry: PriceEntry }) {
   return (
@@ -120,7 +125,16 @@ export default function PriceListSection({ groups }: { groups: PriceGroup[] }) {
           </TabsList>
 
           {visible.map((group) => (
-            <TabsContent key={group.label} id={group.label}>
+            <TabsContent key={group.label} id={group.label} className="flex flex-col gap-3">
+              {group.isStoreOnly && (
+                <Alert variant="info" role="note" className="font-medium">
+                  <IconInfoCircle className="mt-px" />
+                  <span>
+                    Khusus di toko: {group.label.toLowerCase()} tidak bisa dijemput kurir. Bawa
+                    langsung ke toko kami untuk dicuci.
+                  </span>
+                </Alert>
+              )}
               <GroupPrices group={group} />
             </TabsContent>
           ))}

@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto'
 import { inject } from '@adonisjs/core'
-import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
 import { errors as limiterErrors } from '@adonisjs/limiter'
@@ -22,6 +21,8 @@ import {
   ReturnMethod,
   type OrderStage,
 } from '#enums/order_enum'
+import { billBreakdown } from '#helpers/bill'
+import { orderNumber } from '#helpers/order'
 import { lastFourDigits } from '#helpers/phone'
 import {
   billText,
@@ -31,12 +32,10 @@ import {
   orderLink,
 } from '#helpers/whatsapp_text'
 import ActivityLog from '#models/activity_log'
-import Bill from '#models/bill'
 import CustomerAddress from '#models/customer_address'
 import Order from '#models/order'
 import OrderAddress from '#models/order_address'
 import OrderEvent from '#models/order_event'
-import OrderItem from '#models/order_item'
 import OrderPhoto, { proofPath } from '#models/order_photo'
 import ServiceArea, { type Point } from '#models/service_area'
 import Setting from '#models/setting'
@@ -547,6 +546,18 @@ export default class OrderService {
         },
         transaction
       )
+      for (const photo of payload.photos) {
+        await OrderPhoto.storePhoto(photo, order, PhotoKind.INTAKE, staff, transaction)
+      }
+      await ActivityLog.record(
+        {
+          actor: staff,
+          order,
+          action: ActivityAction.ITEMS_PHOTOGRAPHED,
+          detail: `${payload.photos.length} foto barang diterima`,
+        },
+        transaction
+      )
       return order
     })
 
@@ -554,31 +565,18 @@ export default class OrderService {
     return created
   }
 
-  async addIntakePhotos(staff: User, order: Order, files: MultipartFile[]) {
-    await db.transaction(async (transaction) => {
-      for (const file of files) {
-        await OrderPhoto.storePhoto(file, order, PhotoKind.INTAKE, staff, transaction)
-      }
-      await ActivityLog.record(
-        {
-          actor: staff,
-          order,
-          action: ActivityAction.ITEMS_PHOTOGRAPHED,
-          detail: `${files.length} foto barang diterima`,
-        },
-        transaction
-      )
-    })
-  }
-
   async moveOrdersToStage(owner: User, ids: number[], stage: OrderStage) {
-    let changed = 0
+    const moved: string[] = []
+    const failed: { number: string; reason: string }[] = []
     for (const id of ids) {
-      const isChanged = await db.transaction(async (transaction) => {
+      const reason = await db.transaction(async (transaction) => {
         const order = await Order.query({ client: transaction }).where('id', id).forUpdate().first()
-        const next = order?.ownerMoves().find((status) => OrderStatusStage[status] === stage)
-        if (!order || !next) {
-          return false
+        if (!order) {
+          return 'tidak ditemukan'
+        }
+        const next = order.ownerMoves().find((status) => OrderStatusStage[status] === stage)
+        if (!next) {
+          return 'tidak bisa diubah massal ke status ini'
         }
         await this.transitionOrder(
           order,
@@ -586,11 +584,15 @@ export default class OrderService {
           { actor: owner, note: 'Diubah owner', isSensitive: true },
           transaction
         )
-        return true
+        return null
       })
-      changed += isChanged ? 1 : 0
+      if (reason) {
+        failed.push({ number: orderNumber(id), reason })
+      } else {
+        moved.push(orderNumber(id))
+      }
     }
-    return { changed, skipped: ids.length - changed }
+    return { moved, failed }
   }
 
   async cancelOrdersByOwner(owner: User, ids: number[], reason: string) {
@@ -741,21 +743,14 @@ export default class OrderService {
           link,
         })
       case 'bill': {
-        const bill = await Bill.query().where('order_id', order.id).preload('lines').firstOrFail()
-        const items = await OrderItem.query().where('order_id', order.id).orderBy('position', 'asc')
-        const lines = items.map((item) => {
-          const services = bill.lines.filter((line) => line.orderItemId === item.id)
-          return {
-            item: item.name,
-            services: services.map((line) => line.name),
-            total: services.reduce((sum, line) => sum + line.price, 0),
-          }
-        })
+        const billed = await Order.query()
+          .where('id', order.id)
+          .withScopes((scopes) => scopes.withHistory())
+          .firstOrFail()
         return billText({
           customerName,
           number,
-          lines,
-          total: bill.total,
+          bill: billBreakdown(billed)!,
           link,
           isWalkIn: order.source === OrderSource.STORE,
         })

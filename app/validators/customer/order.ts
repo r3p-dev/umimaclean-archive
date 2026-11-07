@@ -15,7 +15,9 @@ function addressId() {
 
 export const createOrderValidator = vine.create({
   key: vine.string().uuid(),
-  items: vine.object({ sepatu: itemCount(), tas: itemCount(), helm: itemCount() }).use(itemsRule()),
+  items: vine
+    .object({ sepatu: itemCount(), tas: itemCount(), helm: vine.number().in([0]) })
+    .use(itemsRule()),
   note: vine.string().trim().maxLength(300).optional(),
   date: vine.string().trim().use(pickupDateRule()),
   slot: vine

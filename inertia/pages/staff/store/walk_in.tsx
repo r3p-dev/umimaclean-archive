@@ -13,11 +13,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import QuantityStepper from '~/components/molecules/quantity_stepper'
 import StaffTopBar from '~/components/organisms/staff_top_bar'
 import ReturnMethodCard from '~/components/organisms/store/return_method_card'
+import IntakePhotos from '~/components/organisms/store/intake_photos'
 import WalkInCustomer from '~/components/organisms/store/walk_in_customer'
 import StaffLayout from '~/components/templates/staff_layout'
 import { usePointLookup } from '~/lib/location/point_lookup'
 import { itemsSummary } from '~/lib/order/items'
+import { photoFile, proofStamp } from '~/lib/proof/camera'
+import { useAccount } from '~/lib/shared/auth'
 import {
+  MAX_INTAKE_PHOTOS,
   WALK_IN_STEPS,
   lookupCustomer,
   sanitizePhone,
@@ -26,6 +30,7 @@ import {
   walkInForm,
   walkInPayload,
   type CustomerLookup,
+  type IntakeShot,
 } from '~/lib/store/walk_in'
 import { cn } from '~/lib/shared/utils'
 
@@ -38,7 +43,10 @@ const COUNTERS = [
 export default function WalkIn({ lookup: found }: { lookup: CustomerLookup }) {
   const form = walkInForm.use()
   const { phone, name, isPicked, items, returnMethod, shouldUseSaved, point, typedAddress } = form
+  const account = useAccount()
   const [isBusy, setBusy] = useState(false)
+  const [shots, setShots] = useState<IntakeShot[]>([])
+  const [serverError, setServerError] = useState<string | null>(null)
   const lookup = lookupCustomer(phone, found)
   const customer = isPicked ? lookup.match : null
 
@@ -58,8 +66,19 @@ export default function WalkIn({ lookup: found }: { lookup: CustomerLookup }) {
   const address = typedAddress ?? pointAddress
   const isDelivery = returnMethod === 'antar'
   const useSaved = !!customer?.address && shouldUseSaved
-  const draft = { phone, name, customer, items, returnMethod, useSaved, address, point }
+  const draft = {
+    phone,
+    name,
+    customer,
+    items,
+    returnMethod,
+    useSaved,
+    address,
+    point,
+    photoCount: shots.length,
+  }
   const blocker = walkInBlocker(draft, found)
+  const message = blocker ?? serverError
 
   const customerText = customer
     ? `${customer.name} · terdaftar`
@@ -72,15 +91,25 @@ export default function WalkIn({ lookup: found }: { lookup: CustomerLookup }) {
       ? `Diantar · ${customer?.area ?? 'alamat utama'}`
       : `Diantar · ${address.split(',')[0] || 'pilih titik di peta'}`
 
-  function submit() {
+  async function submit() {
     if (blocker || isBusy) {
       return
     }
-    router.post(urlFor('staff.walk_in.store'), walkInPayload(draft), {
-      onStart: () => setBusy(true),
-      onSuccess: () => walkInForm.reset(),
-      onFinish: () => setBusy(false),
-    })
+    setBusy(true)
+    setServerError(null)
+    const photos = await Promise.all(
+      shots.map((shot, index) => photoFile(shot.photo, `barang-${index + 1}.jpg`))
+    )
+    router.post(
+      urlFor('staff.walk_in.store'),
+      { ...walkInPayload(draft), photos },
+      {
+        forceFormData: true,
+        onSuccess: () => walkInForm.reset(),
+        onError: (errors) => setServerError(Object.values(errors)[0] ?? null),
+        onFinish: () => setBusy(false),
+      }
+    )
   }
 
   return (
@@ -157,8 +186,18 @@ export default function WalkIn({ lookup: found }: { lookup: CustomerLookup }) {
                     />
                   ))}
                 </div>
+                <IntakePhotos
+                  shots={shots}
+                  stamp={() => proofStamp('TOKO', account.name, true)}
+                  onChange={(next) => {
+                    setShots(next)
+                    setServerError(null)
+                  }}
+                  isDisabled={isBusy}
+                />
                 <p className="text-caption text-muted-foreground">
-                  Setelah transaksi dibuat, kamera terbuka untuk memotret kondisi barang.
+                  Foto semua barang di depan pelanggan (maks. {MAX_INTAKE_PHOTOS} foto). Foto ini
+                  menjadi catatan kondisi barang saat diterima.
                 </p>
               </CardContent>
             </Card>
@@ -186,6 +225,7 @@ export default function WalkIn({ lookup: found }: { lookup: CustomerLookup }) {
                   {[
                     ['Pelanggan', customerText],
                     ['Barang', itemsSummary(items)],
+                    ['Foto', shots.length ? `${shots.length} foto` : '—'],
                     ['Pengembalian', returnText],
                   ].map(([label, value]) => (
                     <div
@@ -202,23 +242,24 @@ export default function WalkIn({ lookup: found }: { lookup: CustomerLookup }) {
                   isDisabled={Boolean(blocker)}
                   isPending={isBusy}
                   onPress={submit}
-                  aria-describedby={blocker ? 'walk-in-blocker' : undefined}
+                  aria-describedby={message ? 'walk-in-blocker' : undefined}
                   className={cn('text-md', blocker && 'h-13')}
                 >
-                  Buat Transaksi &amp; Foto Barang
+                  Buat Transaksi &amp; Periksa
                   {!blocker && <IconArrowRight />}
                 </Button>
-                {blocker && (
+                {message && (
                   <span
                     id="walk-in-blocker"
+                    role={serverError ? 'alert' : undefined}
                     className="text-meta font-medium text-destructive-text"
                   >
-                    {blocker}
+                    {message}
                   </span>
                 )}
                 <p className="text-caption text-muted-foreground">
                   Layanan dan harga ditentukan saat pemeriksaan. Setelah itu pelanggan membayar di
-                  kasir dengan QRIS, tunai, atau EDC.
+                  kasir dengan QRIS atau tunai.
                 </p>
               </CardContent>
             </Card>

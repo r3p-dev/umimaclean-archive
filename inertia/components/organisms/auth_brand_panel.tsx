@@ -14,7 +14,7 @@ import { customerLinks } from '~/lib/navigation/customer_links'
 type Benefit = { icon: ComponentType<SVGProps<SVGSVGElement>>; title: string; text: string }
 
 const CUSTOMER: { headline: string; benefits: Benefit[] } = {
-  headline: 'Sepatu, tas, dan helm bersih tanpa keluar rumah.',
+  headline: 'Sepatu dan tas bersih tanpa keluar rumah.',
   benefits: [
     {
       icon: IconTruckDelivery,

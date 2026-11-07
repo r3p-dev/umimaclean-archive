@@ -13,6 +13,7 @@ import {
   createOrder,
   orderPayload,
   post,
+  postWalkIn,
   savedAddress,
   seedCatalogue,
   useApp,
@@ -66,9 +67,15 @@ test.group('Customer WhatsApp messages', (group) => {
       ],
     }).loginAs(courier)
     assert.lengthOf(sent(), 3)
-    assert.include(sent()[2], '- Sneakers putih: Deep Clean Rp45.000')
-    assert.include(sent()[2], 'Total Rp45.000')
-    assert.isTrue(sent()[2].endsWith(`Rincian dan pembayaran: ${orderLink(order.id)}`))
+    assert.equal(
+      sent()[2],
+      [
+        `Halo ${customer.name.split(' ')[0]}, barang pesanan ${order.number()} sudah diperiksa.`,
+        '1. Sneakers putih (Sepatu)\n   Deep Clean: Rp45.000\n   Subtotal: Rp45.000',
+        'Antar-jemput: Gratis\nTotal: Rp45.000',
+        `Rincian dan pembayaran: ${orderLink(order.id)}`,
+      ].join('\n\n')
+    )
 
     await post(client, `/admin/pesanan/${order.id}/pembayaran`, {
       method: 'cash',
@@ -123,7 +130,7 @@ test.group('Customer WhatsApp messages', (group) => {
     const [deepClean] = await seedCatalogue()
     const staff = await UserFactory.apply('staff').create()
 
-    await post(client, '/staf/transaksi', {
+    await postWalkIn(client, {
       phone: '0812 7777 8888',
       name: 'Andi Pratama',
       items: { sepatu: 1, tas: 0, helm: 0 },
@@ -139,7 +146,7 @@ test.group('Customer WhatsApp messages', (group) => {
       ['6281277778888', '6281277778888']
     )
     assert.include(state.fonnte.messages[0].message, 'Halo Andi')
-    assert.include(state.fonnte.messages[1].message, 'Total Rp45.000')
+    assert.include(state.fonnte.messages[1].message, 'Total: Rp45.000')
     assert.isTrue(state.fonnte.messages[1].message.endsWith(`\nRincian: ${orderLink(order.id)}`))
   })
 

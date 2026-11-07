@@ -57,6 +57,15 @@ export default class BillingService {
       if (order.status !== OrderStatus.IN_INSPECTION) {
         throw fieldError('form', 'Pemeriksaan pesanan ini sudah disimpan.', 'order.status')
       }
+      for (const [index, item] of items.entries()) {
+        if (!order.canHoldItem(item.kind)) {
+          throw fieldError(
+            `items.${index}.kind`,
+            'Cuci helm hanya untuk barang yang dibawa langsung ke toko.',
+            'item.store_only'
+          )
+        }
+      }
 
       const priced = []
       for (const [index, item] of items.entries()) {
@@ -158,28 +167,46 @@ export default class BillingService {
   }
 
   async setPricesActive(owner: User, ids: number[], isActive: boolean) {
-    const services = await Service.query().whereIn('id', ids).whereNull('deleted_at')
-    await Service.query().whereIn('id', ids).update({ is_active: isActive })
-    await ActivityLog.record({
-      actor: owner,
-      action: ActivityAction.PRICE_CHANGED,
-      detail: `${isActive ? 'Mengaktifkan' : 'Menonaktifkan'} ${services.map((service) => service.name).join(', ')}`,
+    return db.transaction(async (transaction) => {
+      const services = await Service.query({ client: transaction })
+        .whereIn('id', ids)
+        .whereNull('deleted_at')
+      await Service.query({ client: transaction })
+        .whereIn('id', ids)
+        .whereNull('deleted_at')
+        .update({ is_active: isActive })
+      await ActivityLog.record(
+        {
+          actor: owner,
+          action: ActivityAction.PRICE_CHANGED,
+          detail: `${isActive ? 'Mengaktifkan' : 'Menonaktifkan'} ${services.map((service) => service.name).join(', ')}`,
+        },
+        transaction
+      )
+      return services.length
     })
-    return services.length
   }
 
   async removePrices(owner: User, ids: number[]) {
-    const services = await Service.query().whereIn('id', ids).whereNull('deleted_at')
-    await Service.query()
-      .whereIn('id', ids)
-      .update({ deleted_at: DateTime.now().toJSDate(), is_active: false })
-    await ActivityLog.record({
-      actor: owner,
-      action: ActivityAction.PRICE_CHANGED,
-      detail: `Menghapus ${services.map((service) => service.name).join(', ')}`,
-      isSensitive: true,
+    return db.transaction(async (transaction) => {
+      const services = await Service.query({ client: transaction })
+        .whereIn('id', ids)
+        .whereNull('deleted_at')
+      await Service.query({ client: transaction })
+        .whereIn('id', ids)
+        .whereNull('deleted_at')
+        .update({ deleted_at: DateTime.now().toJSDate(), is_active: false })
+      await ActivityLog.record(
+        {
+          actor: owner,
+          action: ActivityAction.PRICE_CHANGED,
+          detail: `Menghapus ${services.map((service) => service.name).join(', ')}`,
+          isSensitive: true,
+        },
+        transaction
+      )
+      return services.length
     })
-    return services.length
   }
 
   async #resolve(

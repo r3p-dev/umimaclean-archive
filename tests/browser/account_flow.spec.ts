@@ -58,8 +58,12 @@ test.group('Customer account in the browser', (group) => {
     await page.getByLabel('Nama').fill('Budi Santoso')
     await page.getByLabel('Nomor WhatsApp').fill('812 9999 0000')
     await page.getByLabel('Kata sandi', { exact: true }).fill('kata-sandi-aman')
+    await page.getByLabel('Ulangi kata sandi').fill('kata-sandi-lain')
     await page.getByRole('checkbox', { name: /Saya setuju/ }).check({ force: true })
     await page.waitForFunction(TURNSTILE_TOKEN_ISSUED)
+    await page.getByRole('button', { name: 'Daftar' }).click()
+    await page.locator('#register-confirmation-error').getByText('Kata sandi tidak sama.').waitFor()
+    await page.getByLabel('Ulangi kata sandi').fill('kata-sandi-aman')
     await page.getByRole('button', { name: 'Daftar' }).click()
 
     await page.waitForURL(/\/verifikasi$/)

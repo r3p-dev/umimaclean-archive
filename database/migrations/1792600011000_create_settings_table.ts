@@ -2,7 +2,7 @@
  * settings: store settings the owner edits, one JSON value per key.
  *
  * Keys: store (name, WhatsApp, address, hours), pickup_slots (label, capacity, on),
- * payment_methods (qris, cash, edc) and inactive_days. A key/value table because each
+ * payment_methods (qris, cash) and inactive_days. A key/value table because each
  * setting is a small object read whole; a missing key falls back to the default in code.
  */
 import { BaseSchema } from '@adonisjs/lucid/schema'

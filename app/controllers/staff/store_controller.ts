@@ -9,11 +9,7 @@ import PaymentService from '#services/payment_service'
 import { maskPhone, normalizePhone } from '#helpers/phone'
 import { qrisOf } from '#transformers/order_transformer'
 import ReceiptTransformer from '#transformers/receipt_transformer'
-import {
-  counterPaymentValidator,
-  intakePhotosValidator,
-  walkInValidator,
-} from '#validators/staff/store'
+import { counterPaymentValidator, walkInValidator } from '#validators/staff/store'
 import { fieldError } from '#validators/shared/field_error'
 import { SERVICE_ZONE } from '#validators/shared/rules/pickup'
 
@@ -54,26 +50,6 @@ export default class StoreController {
     await bouncer.with(OrderPolicy).authorize('work')
     const payload = await request.validateUsing(walkInValidator)
     const order = await this.orders.createWalkInOrder(auth.getUserOrFail(), payload.phone, payload)
-    return response.redirect().withQs({ untuk: 'intake', pesanan: order.id }).toRoute('staff.photo')
-  }
-
-  async photo({ bouncer, inertia, request }: HttpContext) {
-    await bouncer.with(OrderPolicy).authorize('work')
-    const id = Number(request.qs().pesanan) || null
-    const order = id ? await this.orders.findOrderById(id) : null
-    return inertia.render('staff/store/photo', {
-      kind: String(request.qs().untuk ?? 'intake'),
-      id,
-      number: id ? orderNumber(id) : '',
-      canPrintIntake: order?.canPrintIntakeSlip() ?? false,
-    })
-  }
-
-  async storePhotos({ auth, bouncer, params, request, response }: HttpContext) {
-    await bouncer.with(OrderPolicy).authorize('work')
-    const order = await this.#order(params.id)
-    const { photos } = await request.validateUsing(intakePhotosValidator)
-    await this.orders.addIntakePhotos(auth.getUserOrFail(), order, photos)
     return response.redirect().toRoute('staff.inspection', { id: order.id })
   }
 
@@ -102,9 +78,6 @@ export default class StoreController {
     await bouncer.with(OrderPolicy).authorize('work')
     const order = await this.#order(params.id)
     const payload = await request.validateUsing(counterPaymentValidator)
-    if (payload.method === 'card' && !payload.reference) {
-      throw fieldError('reference', 'Isi nomor referensi dari struk EDC.', 'reference.required')
-    }
     await this.payments.recordCounterPayment(auth.getUserOrFail(), order, payload)
     session.flash('success', 'Pembayaran dicatat. Pesanan masuk Dalam Pencucian.')
     return response.redirect().toRoute('staff.store_payment', { id: order.id })

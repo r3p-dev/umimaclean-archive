@@ -1,3 +1,4 @@
+import db from '@adonisjs/lucid/services/db'
 import { ActivityAction } from '#enums/activity_enum'
 import ActivityLog from '#models/activity_log'
 import ServiceArea, { type Point } from '#models/service_area'
@@ -23,16 +24,24 @@ export default class AreaService {
   }
 
   async setAreaActive(owner: User, id: number, isActive: boolean) {
-    const area = await ServiceArea.summary().where('id', id).firstOrFail()
-
-    await area.merge({ isActive: isActive }).save()
-    await ActivityLog.record({
-      actor: owner,
-      action: ActivityAction.SETTINGS_CHANGED,
-      detail: `Area layanan: Kec. ${area.name}, ${area.city} ${isActive ? 'diaktifkan' : 'dinonaktifkan'}`,
+    return db.transaction(async (transaction) => {
+      const area = await ServiceArea.summary()
+        .useTransaction(transaction)
+        .where('id', id)
+        .forUpdate()
+        .firstOrFail()
+      area.useTransaction(transaction)
+      await area.merge({ isActive }).save()
+      await ActivityLog.record(
+        {
+          actor: owner,
+          action: ActivityAction.SETTINGS_CHANGED,
+          detail: `Area layanan: Kec. ${area.name}, ${area.city} ${isActive ? 'diaktifkan' : 'dinonaktifkan'}`,
+        },
+        transaction
+      )
+      return area
     })
-
-    return area
   }
 
   listAreaSummaries() {

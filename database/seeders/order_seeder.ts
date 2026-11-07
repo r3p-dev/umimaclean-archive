@@ -17,10 +17,12 @@ import {
   ReturnMethod,
 } from '#enums/order_enum'
 import {
+  PAYMENT_RECEIVED_STATUSES,
   PaymentChannel,
   PaymentMethod,
   PaymentMethodLabel,
   PaymentStatus,
+  PaymentStatusLabel,
 } from '#enums/payment_enum'
 import { formatRupiah } from '#helpers/money'
 import { Role } from '#enums/role_enum'
@@ -68,6 +70,8 @@ type Spec = {
   isMovedByOwner?: boolean
   deliveryLabel?: string
   manualAddress?: { addressText: string; lat: number; lng: number }
+  extraQris?: { status: PaymentStatus; note?: string; delta?: number }
+  acceptedQris?: { delta: number; note: string }
 }
 
 type Step = {
@@ -123,13 +127,11 @@ export default class extends BaseSeeder {
             items: [
               1 + Math.floor(this.#random() * 2),
               this.#random() < 0.3 ? 1 : 0,
-              this.#random() < 0.2 ? 1 : 0,
+              isWalkIn && this.#random() < 0.2 ? 1 : 0,
             ],
             createdAt: today.minus({ days: day }).plus({ hours: 9 + index * 3 }),
             pickupSlot: index % 3,
-            method: isWalkIn
-              ? pick([PaymentMethod.CASH, PaymentMethod.CARD, PaymentMethod.QRIS])
-              : PaymentMethod.QRIS,
+            method: isWalkIn ? pick([PaymentMethod.CASH, PaymentMethod.QRIS]) : PaymentMethod.QRIS,
           },
           staff,
           services
@@ -190,7 +192,7 @@ export default class extends BaseSeeder {
       ],
       [
         'online, delivery to another recipient',
-        online(laras, OrderStatus.AWAITING_PICKUP, [1, 1, 1], {
+        online(laras, OrderStatus.AWAITING_PICKUP, [1, 1, 0], {
           ...upcoming,
           pickupSlot: 1,
           deliveryLabel: 'Kos Adik',
@@ -202,7 +204,7 @@ export default class extends BaseSeeder {
       ],
       [
         'online, 12.00 slot, moved by owner',
-        online(hendra, OrderStatus.COURIER_EN_ROUTE, [2, 0, 1], {
+        online(hendra, OrderStatus.COURIER_EN_ROUTE, [2, 1, 0], {
           pickupSlot: 1,
           isMovedByOwner: true,
         }),
@@ -223,7 +225,7 @@ export default class extends BaseSeeder {
       ],
       [
         'online, unpaid, no QRIS yet, 5 items',
-        online(rina, OrderStatus.AWAITING_PAYMENT, [3, 1, 1]),
+        online(rina, OrderStatus.AWAITING_PAYMENT, [3, 2, 0]),
       ],
       [
         'walk-in guest, bill saved, unpaid',
@@ -233,18 +235,19 @@ export default class extends BaseSeeder {
       ],
       ['online, paid with QRIS', online(rina, OrderStatus.IN_CLEANING, [1, 0, 0])],
       [
-        'walk-in, paid cash with change',
-        store(dewi, OrderStatus.IN_CLEANING, ReturnMethod.STORE, [2, 1, 0]),
+        'walk-in, paid cash with change, counter QRIS paid late (refund due)',
+        store(dewi, OrderStatus.IN_CLEANING, ReturnMethod.STORE, [2, 1, 0], {
+          extraQris: { status: PaymentStatus.REFUND_DUE },
+        }),
       ],
       [
         'online, delivery to another recipient',
-        online(rina, OrderStatus.READY_FOR_DELIVERY, [2, 0, 1], { deliveryLabel: 'Rumah Ibu' }),
+        online(rina, OrderStatus.READY_FOR_DELIVERY, [2, 1, 0], { deliveryLabel: 'Rumah Ibu' }),
       ],
       [
-        'walk-in guest, typed address, EDC',
+        'walk-in guest, typed address, paid cash',
         store(null, OrderStatus.READY_FOR_DELIVERY, ReturnMethod.DELIVERY, [4, 0, 0], {
           walkIn: { name: 'Wulan Sari', phone: '6281563290817' },
-          method: PaymentMethod.CARD,
           manualAddress: {
             addressText: 'Jl. Riau No. 23, Citarum, Bandung Wetan, Kota Bandung',
             lat: -6.9056,
@@ -278,8 +281,10 @@ export default class extends BaseSeeder {
         online(rina, OrderStatus.COMPLETED, [2, 1, 0], { pickupSlot: 2 }),
       ],
       [
-        'walk-in, collected, paid cash',
-        store(rudi, OrderStatus.COMPLETED, ReturnMethod.STORE, [1, 0, 0]),
+        'walk-in, collected, paid cash, counter QRIS cancel failed',
+        store(rudi, OrderStatus.COMPLETED, ReturnMethod.STORE, [1, 0, 0], {
+          extraQris: { status: PaymentStatus.CANCEL_FAILED },
+        }),
       ],
       [
         'online, cancelled by customer',
@@ -291,9 +296,39 @@ export default class extends BaseSeeder {
       ],
       [
         'online, cancelled by owner in inspection',
-        online(nadia, OrderStatus.CANCELLED, [2, 0, 1], {
+        online(nadia, OrderStatus.CANCELLED, [2, 1, 0], {
           ownerCancelsAt: OrderStatus.IN_INSPECTION,
-          cancelReason: 'Bahan helm retak, tidak bisa dicuci',
+          cancelReason: 'Bahan tas sudah rapuh, tidak bisa dicuci',
+        }),
+      ],
+      [
+        'online, QRIS paid Rp5.000 short (amount mismatch)',
+        online(nadia, OrderStatus.AWAITING_PAYMENT, [1, 0, 0], {
+          extraQris: { status: PaymentStatus.AMOUNT_MISMATCH, delta: -5000 },
+        }),
+      ],
+      [
+        'online, QRIS overpaid, accepted by owner',
+        online(fajar, OrderStatus.IN_CLEANING, [1, 0, 0], {
+          acceptedQris: { delta: 5000, note: 'Pelanggan setuju kelebihan dianggap tip' },
+        }),
+      ],
+      [
+        'walk-in, paid cash, late counter QRIS refunded by owner',
+        store(hendra, OrderStatus.COMPLETED, ReturnMethod.STORE, [1, 0, 0], {
+          extraQris: {
+            status: PaymentStatus.REFUNDED,
+            note: 'Transfer BCA ke pelanggan, 3 Nov 14.20',
+          },
+        }),
+      ],
+      [
+        'walk-in, paid cash, counter QRIS cancel failed, handled by owner',
+        store(laras, OrderStatus.COMPLETED, ReturnMethod.STORE, [1, 0, 0], {
+          extraQris: {
+            status: PaymentStatus.CANCELLED,
+            note: 'Dicek di dashboard Midtrans, transaksi sudah batal',
+          },
         }),
       ],
     ]
@@ -413,16 +448,25 @@ export default class extends BaseSeeder {
       if (status === OrderStatus.AWAITING_PAYMENT) {
         total = await this.#bill(order, services, staff.courier, at)
       }
+      if (
+        (status === OrderStatus.AWAITING_PAYMENT &&
+          spec.extraQris?.status === PaymentStatus.AMOUNT_MISMATCH) ||
+        (status === OrderStatus.IN_CLEANING &&
+          spec.extraQris &&
+          spec.extraQris.status !== PaymentStatus.AMOUNT_MISMATCH)
+      ) {
+        await this.#extraQris(order, spec.extraQris!, total, at, staff.owner)
+      }
       if (status === OrderStatus.IN_CLEANING) {
-        await Payment.create({
+        const paid = await Payment.create({
           orderId: order.id,
           channel: isOnline ? PaymentChannel.ONLINE : PaymentChannel.COUNTER,
           method,
           status: PaymentStatus.PAID,
-          amount: total,
+          amount: total + (spec.acceptedQris?.delta ?? 0),
+          note: spec.acceptedQris ? `Diterima owner: ${spec.acceptedQris.note}` : null,
           cashReceived:
             method === PaymentMethod.CASH ? (Math.floor(total / 50000) + 1) * 50000 : null,
-          reference: method === PaymentMethod.CARD ? `APR${order.id}` : null,
           providerOrderId: isOnline ? `UMC-${order.id}-${at.toMillis()}` : null,
           providerTransactionId: isOnline ? randomUUID() : null,
           expiresAt: isCounter ? null : at.plus({ minutes: 3 }),
@@ -431,6 +475,16 @@ export default class extends BaseSeeder {
           createdAt: isCounter ? at : at.minus({ minutes: 12 }),
           updatedAt: at,
         })
+        if (spec.acceptedQris) {
+          await this.#log(
+            staff.owner,
+            order,
+            ActivityAction.PAYMENT_REVIEWED,
+            `${paid.providerOrderId} · ${formatRupiah(paid.amount)} · ${PaymentStatusLabel[PaymentStatus.AMOUNT_MISMATCH]} → ${PaymentStatusLabel[PaymentStatus.PAID]} · catatan: ${spec.acceptedQris.note}`,
+            at,
+            true
+          )
+        }
       }
       if (
         status === OrderStatus.READY_FOR_DELIVERY ||
@@ -605,6 +659,55 @@ export default class extends BaseSeeder {
     await mkdir(dirname(proofPath(path)), { recursive: true })
     await writeFile(proofPath(path), PLACEHOLDER)
     await OrderPhoto.create({ orderId: order.id, kind, path, takenBy: staff.id, createdAt: at })
+  }
+
+  async #extraQris(
+    order: Order,
+    extra: NonNullable<Spec['extraQris']>,
+    total: number,
+    at: DateTime,
+    owner: User
+  ) {
+    const amount = total + (extra.delta ?? 0)
+    const isReceived = PAYMENT_RECEIVED_STATUSES.includes(extra.status)
+    const prefix: Partial<Record<PaymentStatus, string>> = {
+      [PaymentStatus.REFUNDED]: 'Dikembalikan',
+      [PaymentStatus.CANCELLED]: 'Ditangani owner',
+    }
+    const note =
+      extra.status === PaymentStatus.AMOUNT_MISMATCH
+        ? `Ditagih ${formatRupiah(total)}, diterima ${formatRupiah(amount)}`
+        : extra.note
+          ? `${prefix[extra.status]}: ${extra.note}`
+          : null
+    const payment = await Payment.create({
+      orderId: order.id,
+      channel: order.source === OrderSource.ONLINE ? PaymentChannel.ONLINE : PaymentChannel.COUNTER,
+      method: PaymentMethod.QRIS,
+      status: extra.status,
+      amount,
+      providerOrderId: `UMC-${order.id}-${at.minus({ minutes: 5 }).toMillis()}`,
+      providerTransactionId: randomUUID(),
+      expiresAt: at.plus({ minutes: 10 }),
+      paidAt: isReceived ? at.plus({ minutes: 2 }) : null,
+      note,
+      createdAt: at.minus({ minutes: 5 }),
+      updatedAt: at,
+    })
+    if (extra.note) {
+      const from =
+        extra.status === PaymentStatus.REFUNDED
+          ? PaymentStatus.REFUND_DUE
+          : PaymentStatus.CANCEL_FAILED
+      await this.#log(
+        owner,
+        order,
+        ActivityAction.PAYMENT_REVIEWED,
+        `${payment.providerOrderId} · ${formatRupiah(amount)} · ${PaymentStatusLabel[from]} → ${PaymentStatusLabel[extra.status]} · catatan: ${extra.note}`,
+        DateTime.min(at.plus({ minutes: 30 }), DateTime.now()),
+        true
+      )
+    }
   }
 
   async #log(

@@ -25,10 +25,7 @@ export const itemsRule = vine.createRule((value, _options, field) => {
     return
   }
 
-  const total = Object.values(value).reduce<number>(
-    (sum, count) => sum + (typeof count === 'number' ? count : 0),
-    0
-  )
+  const total = Object.values(value).reduce<number>((sum, count) => sum + (Number(count) || 0), 0)
   if (total < 1) {
     field.report('itemsEmpty', 'itemsEmpty', field)
   }

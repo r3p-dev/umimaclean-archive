@@ -1,6 +1,6 @@
 import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
-import { ItemKindLabel } from '#enums/order_enum'
+import { ItemKindLabel, STORE_ONLY_ITEM_KINDS, type ItemKind } from '#enums/order_enum'
 import { ServiceType } from '#enums/service_enum'
 import BillingService from '#services/billing_service'
 import ServiceAreaTransformer from '#transformers/service_area_transformer'
@@ -29,7 +29,12 @@ export default class HomeController {
             description: service.description,
           }))
 
-      return { label, main: entry(ServiceType.MAIN), addons: entry(ServiceType.ADDON) }
+      return {
+        label,
+        isStoreOnly: STORE_ONLY_ITEM_KINDS.includes(kind as ItemKind),
+        main: entry(ServiceType.MAIN),
+        addons: entry(ServiceType.ADDON),
+      }
     })
 
     const areas = await this.area.listAreaSummaries()

@@ -24,15 +24,22 @@ export default function PaidReceipt({ receipt, store }: { receipt: Data.Receipt;
       <SlipDivider />
       {receipt.items.map((item, index) => (
         <div key={`${item.name}-${index}`} className="flex flex-col">
-          <SlipRow label={item.name} isStrong>
-            {formatRupiah(item.subtotal)}
-          </SlipRow>
-          {item.services.map((service) => (
-            <SlipRow key={service.name} label={<span className="pl-2">{service.name}</span>}>
-              {formatRupiah(service.price)}
+          <p className="font-bold">{item.name}</p>
+          {item.main && <SlipRow label={item.main.name}>{formatRupiah(item.main.price)}</SlipRow>}
+          {item.addons.map((addon) => (
+            <SlipRow key={addon.name} label={<span className="pl-2">+ {addon.name}</span>}>
+              {formatRupiah(addon.price)}
             </SlipRow>
           ))}
+          <SlipRow label="Subtotal" isStrong>
+            {formatRupiah(item.subtotal)}
+          </SlipRow>
         </div>
+      ))}
+      {receipt.extras.map((extra) => (
+        <SlipRow key={extra.label} label={extra.label}>
+          {extra.amount ? formatRupiah(extra.amount) : 'Gratis'}
+        </SlipRow>
       ))}
       <SlipDivider />
       <div className="text-[14px]">
@@ -50,7 +57,7 @@ export default function PaidReceipt({ receipt, store }: { receipt: Data.Receipt;
           {payment.change !== null && (
             <SlipRow label="Kembalian">{formatRupiah(payment.change)}</SlipRow>
           )}
-          {payment.reference && <SlipRow label="Referensi">{payment.reference}</SlipRow>}
+          {payment.transactionId && <SlipRow label="ID transaksi">{payment.transactionId}</SlipRow>}
         </>
       )}
       <SlipDivider />

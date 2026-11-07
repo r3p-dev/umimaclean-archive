@@ -6,7 +6,6 @@ import OrderPolicy from '#policies/order_policy'
 import OrderService from '#services/order_service'
 import SettingService from '#services/setting_service'
 import DeliveryLabelTransformer from '#transformers/delivery_label_transformer'
-import IntakeSlipTransformer from '#transformers/intake_slip_transformer'
 import ReceiptTransformer from '#transformers/receipt_transformer'
 
 @inject()
@@ -15,19 +14,6 @@ export default class PrintsController {
     protected orders: OrderService,
     protected settings: SettingService
   ) {}
-
-  async intake({ bouncer, inertia, params }: HttpContext) {
-    await bouncer.with(OrderPolicy).authorize('work')
-    const order = await this.#order(params.id)
-    if (!order.canPrintIntakeSlip()) {
-      throw new Exception('Tanda terima hanya untuk transaksi di toko', { status: 404 })
-    }
-
-    return inertia.render('staff/print/intake', {
-      slip: new IntakeSlipTransformer(order).toObject(),
-      store: await this.#store(),
-    })
-  }
 
   async label({ bouncer, inertia, params }: HttpContext) {
     await bouncer.with(OrderPolicy).authorize('work')

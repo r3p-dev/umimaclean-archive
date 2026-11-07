@@ -46,12 +46,11 @@ export const DETAIL_CANCEL_REASONS = [
   'Lainnya',
 ]
 
-export type FixMethod = 'qris_counter' | 'cash' | 'card' | 'qris_online'
+export type FixMethod = 'qris_counter' | 'cash' | 'qris_online'
 
 export const FIX_METHODS: { value: FixMethod; label: string }[] = [
   { value: 'qris_counter', label: 'QRIS (offline)' },
   { value: 'cash', label: 'Tunai di toko' },
-  { value: 'card', label: 'EDC di toko' },
   { value: 'qris_online', label: 'QRIS (online)' },
 ]
 
@@ -73,17 +72,22 @@ export function statusEligible(selected: AdminOrder[], target: StatusTone) {
   return selected.filter((order) => order.next.includes(target))
 }
 
+export function bulkTargets(selected: AdminOrder[]) {
+  return STAGE_FILTERS.filter((stage) => selected.some((order) => order.next.includes(stage)))
+}
+
 export function statusNote(selected: AdminOrder[], target: StatusTone | null) {
+  if (!bulkTargets(selected).length) {
+    return 'Tidak ada pesanan terpilih yang bisa diubah massal. Ubah status massal hanya untuk Barang Kami Terima → Sedang Diperiksa dan Siap Diambil → Selesai; langkah lain dikerjakan staf dengan buktinya.'
+  }
   if (!target) {
-    return 'Pilih status tujuan. Hanya langkah berikutnya yang sah, dan perubahan dicatat di Aktivitas Staf.'
+    return 'Pilih status tujuan. Hanya langkah tanpa bukti staf yang tersedia, dan perubahan dicatat di Aktivitas Staf.'
   }
   const eligible = statusEligible(selected, target).length
   const skipped = selected.length - eligible
   return (
     `${eligible} dari ${selected.length} pesanan akan diubah ke “${STAGE_LABEL[target]}”.` +
-    (skipped
-      ? ` ${skipped} dilewati karena bukan langkah berikutnya (pembayaran dicatat lewat koreksi pembayaran).`
-      : '')
+    (skipped ? ` ${skipped} lainnya tidak bisa diubah massal ke status ini dan tidak dikirim.` : '')
   )
 }
 

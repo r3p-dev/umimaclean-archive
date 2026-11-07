@@ -28,7 +28,7 @@ test.group('Print pages', (group) => {
       .firstOrFail()
     await browserContext.loginAs(staff)
 
-    for (const path of ['tanda-terima', 'label', 'struk']) {
+    for (const path of ['label', 'struk']) {
       const page = await browserContext.newPage()
       await page.setViewportSize({ width: 360, height: 780 })
       await page.goto(`/staf/cetak/${order.id}/${path}`)

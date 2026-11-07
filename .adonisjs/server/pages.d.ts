@@ -40,7 +40,6 @@ declare module '@adonisjs/inertia/types' {
     'customer/orders/receipt': ExtractProps<(typeof import('../../inertia/pages/customer/orders/receipt.tsx'))['default']>
     'customer/orders/show': ExtractProps<(typeof import('../../inertia/pages/customer/orders/show.tsx'))['default']>
     'customer/orders/unlock': ExtractProps<(typeof import('../../inertia/pages/customer/orders/unlock.tsx'))['default']>
-    'customer/payment/bill': ExtractProps<(typeof import('../../inertia/pages/customer/payment/bill.tsx'))['default']>
     'customer/payment/qris': ExtractProps<(typeof import('../../inertia/pages/customer/payment/qris.tsx'))['default']>
     'customer/profile/edit': ExtractProps<(typeof import('../../inertia/pages/customer/profile/edit.tsx'))['default']>
     'customer/profile/phone': ExtractProps<(typeof import('../../inertia/pages/customer/profile/phone.tsx'))['default']>
@@ -54,14 +53,12 @@ declare module '@adonisjs/inertia/types' {
     'staff/account/profile': ExtractProps<(typeof import('../../inertia/pages/staff/account/profile.tsx'))['default']>
     'staff/home': ExtractProps<(typeof import('../../inertia/pages/staff/home.tsx'))['default']>
     'staff/more': ExtractProps<(typeof import('../../inertia/pages/staff/more.tsx'))['default']>
-    'staff/print/intake': ExtractProps<(typeof import('../../inertia/pages/staff/print/intake.tsx'))['default']>
     'staff/print/label': ExtractProps<(typeof import('../../inertia/pages/staff/print/label.tsx'))['default']>
     'staff/print/receipt': ExtractProps<(typeof import('../../inertia/pages/staff/print/receipt.tsx'))['default']>
     'staff/process/inspection': ExtractProps<(typeof import('../../inertia/pages/staff/process/inspection.tsx'))['default']>
     'staff/process/queue': ExtractProps<(typeof import('../../inertia/pages/staff/process/queue.tsx'))['default']>
     'staff/process/washing': ExtractProps<(typeof import('../../inertia/pages/staff/process/washing.tsx'))['default']>
     'staff/store/payment': ExtractProps<(typeof import('../../inertia/pages/staff/store/payment.tsx'))['default']>
-    'staff/store/photo': ExtractProps<(typeof import('../../inertia/pages/staff/store/photo.tsx'))['default']>
     'staff/store/walk_in': ExtractProps<(typeof import('../../inertia/pages/staff/store/walk_in.tsx'))['default']>
     'staff/tasks/active': ExtractProps<(typeof import('../../inertia/pages/staff/tasks/active.tsx'))['default']>
     'staff/tasks/queue': ExtractProps<(typeof import('../../inertia/pages/staff/tasks/queue.tsx'))['default']>

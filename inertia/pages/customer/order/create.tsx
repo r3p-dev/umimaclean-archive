@@ -41,7 +41,6 @@ import {
 const ITEMS = [
   { key: 'sepatu', label: 'Sepatu', icon: IconShoe },
   { key: 'tas', label: 'Tas', icon: IconBackpack },
-  { key: 'helm', label: 'Helm', icon: IconHelmet },
 ] as const
 
 export default function OrderCreate({
@@ -176,6 +175,10 @@ export default function OrderCreate({
                         />
                       ))}
                     </div>
+                    <p className="flex gap-2 text-meta text-muted-foreground">
+                      <IconHelmet className="size-4.5 shrink-0" />
+                      Cuci helm hanya untuk helm yang dibawa langsung ke toko.
+                    </p>
                   </CardContent>
                 </Card>
                 <Alert variant="info" role="note" className="p-3.5 text-accent-foreground">

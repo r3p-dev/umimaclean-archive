@@ -36,8 +36,22 @@ const CATALOGUE: ServiceSeed[] = [
   ['Tas Large · kulit', MAIN, [BAG], 85000, 5, 'Tas kulit atau nubuck, kurang dari 60 cm.'],
   ['Tas X-Large · kanvas', MAIN, [BAG], 85000, 5, 'Tas kanvas atau kain, lebih dari 60 cm.'],
   ['Tas X-Large · kulit', MAIN, [BAG], 100000, 5, 'Tas kulit atau nubuck, lebih dari 60 cm.'],
-  ['Helmet Spa Reguler', MAIN, [HELMET], 35000, 2, 'Busa dalam dilepas, dicuci, dan dikeringkan.'],
-  ['Helmet Spa Premium', MAIN, [HELMET], 70000, 3, 'Cuci menyeluruh plus disinfeksi dan pewangi.'],
+  [
+    'Helmet Spa Reguler',
+    MAIN,
+    [HELMET],
+    35000,
+    2,
+    'Busa dalam dilepas, dicuci, dan dikeringkan. Bawa langsung ke toko.',
+  ],
+  [
+    'Helmet Spa Premium',
+    MAIN,
+    [HELMET],
+    70000,
+    3,
+    'Cuci menyeluruh plus disinfeksi dan pewangi. Bawa langsung ke toko.',
+  ],
 ]
 
 export default class extends BaseSeeder {

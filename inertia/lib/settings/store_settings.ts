@@ -1,12 +1,11 @@
 import { router } from '@inertiajs/react'
 import { urlFor } from '~/client'
 
-export type StorePayKey = 'qris' | 'cash' | 'edc'
+export type StorePayKey = 'qris' | 'cash'
 
 export const STORE_PAY_METHODS: { key: StorePayKey; label: string }[] = [
   { key: 'qris', label: 'QRIS (dari Midtrans)' },
   { key: 'cash', label: 'Tunai di toko' },
-  { key: 'edc', label: 'EDC di toko' },
 ]
 
 export type PickupSlotSetting = { label: string; capacity: number; on: boolean }

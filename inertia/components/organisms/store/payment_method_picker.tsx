@@ -1,12 +1,11 @@
 import { type ComponentType, type SVGProps } from 'react'
-import { IconCash, IconCreditCard, IconQrcode } from '@tabler/icons-react'
+import { IconCash, IconQrcode } from '@tabler/icons-react'
 import type { PaymentMethod } from '~/lib/store/payment'
 import { cn } from '~/lib/shared/utils'
 
 const ICONS: Record<PaymentMethod, ComponentType<SVGProps<SVGSVGElement>>> = {
   qris: IconQrcode,
   cash: IconCash,
-  edc: IconCreditCard,
 }
 
 const COLUMNS: Record<number, string> = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3' }

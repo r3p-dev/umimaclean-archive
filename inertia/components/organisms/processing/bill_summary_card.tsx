@@ -2,12 +2,12 @@ import { Link } from '@adonisjs/inertia/react'
 import { IconCircleCheck, IconDeviceFloppy } from '@tabler/icons-react'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
-import { formatRupiah } from '~/lib/shared/format'
+import BillItems from '~/components/organisms/payment/bill_items'
+import type { BillExtra, BillItem } from '~/lib/payment/bill'
 import { cn } from '~/lib/shared/utils'
 
 export default function BillSummaryCard({
-  rows,
-  total,
+  bill,
   missing,
   isSaved,
   savedText,
@@ -15,8 +15,7 @@ export default function BillSummaryCard({
   isSaving = false,
   onSave,
 }: {
-  rows: { key: string; title: string; subtotal: number; services: string }[]
-  total: number
+  bill: { items: BillItem[]; extras: BillExtra[]; total: number }
   missing: number
   isSaved: boolean
   savedText: string
@@ -34,25 +33,7 @@ export default function BillSummaryCard({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {rows.length > 0 && (
-              <ul className="divide-y divide-border">
-                {rows.map((row) => (
-                  <li key={row.key} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
-                    <div className="flex justify-between gap-2.5 font-semibold">
-                      <span>{row.title}</span>
-                      <span>{formatRupiah(row.subtotal)}</span>
-                    </div>
-                    <span className="text-meta text-muted-foreground">{row.services}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="flex items-baseline justify-between border-t border-border pt-3">
-              <span className="text-md leading-none font-semibold">Total</span>
-              <span className="text-2xl leading-none font-bold tracking-tight">
-                {formatRupiah(total)}
-              </span>
-            </div>
+            <BillItems items={bill.items} extras={bill.extras} total={bill.total} />
             {isSaved ? (
               <div
                 role="status"

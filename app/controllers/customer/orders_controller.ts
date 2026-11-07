@@ -53,19 +53,8 @@ export default class OrdersController {
     })
   }
 
-  async bill(ctx: HttpContext) {
-    const { order, canView } = await this.#viewable(ctx)
-    if (!canView) {
-      return this.#unlockPage(ctx, order)
-    }
-
-    const isOwner = await ctx.bouncer.with(OrderPolicy).allows('own', order)
-    return ctx.inertia.render('customer/payment/bill', {
-      id: order.id,
-      number: order.number(),
-      order: new OrderTransformer(order, isOwner).toObject(),
-      isOwner,
-    })
+  async oldBill({ params, response }: HttpContext) {
+    return response.redirect().toRoute('customer.orders.show', { id: params.id })
   }
 
   async receipt(ctx: HttpContext) {

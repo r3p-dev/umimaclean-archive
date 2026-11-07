@@ -42,7 +42,7 @@ export interface ApiDefinition {
         check: typeof routes['customer.orders.pay.check']
       }
       show: typeof routes['customer.orders.show']
-      bill: typeof routes['customer.orders.bill']
+      oldBill: typeof routes['customer.orders.old_bill']
       receipt: typeof routes['customer.orders.receipt']
       unlock: typeof routes['customer.orders.unlock']
     }
@@ -94,16 +94,13 @@ export interface ApiDefinition {
     more: typeof routes['staff.more']
     walkIn: typeof routes['staff.walk_in'] & {
       store: typeof routes['staff.walk_in.store']
-      photos: typeof routes['staff.walk_in.photos']
     }
     storePayment: typeof routes['staff.store_payment'] & {
       record: typeof routes['staff.store_payment.record']
       qris: typeof routes['staff.store_payment.qris']
       qrisCheck: typeof routes['staff.store_payment.qris_check']
     }
-    photo: typeof routes['staff.photo']
     print: {
-      intake: typeof routes['staff.print.intake']
       label: typeof routes['staff.print.label']
       receipt: typeof routes['staff.print.receipt']
     }
@@ -133,6 +130,10 @@ export interface ApiDefinition {
     }
     reconciliation: typeof routes['admin.reconciliation'] & {
       refresh: typeof routes['admin.reconciliation.refresh']
+      refunded: typeof routes['admin.reconciliation.refunded']
+      mismatch: typeof routes['admin.reconciliation.mismatch']
+      recheck: typeof routes['admin.reconciliation.recheck']
+      handled: typeof routes['admin.reconciliation.handled']
     }
     reports: typeof routes['admin.reports']
     costs: {

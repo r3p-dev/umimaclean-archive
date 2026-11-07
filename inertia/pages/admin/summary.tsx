@@ -9,6 +9,7 @@ import ExportButton from '~/components/molecules/export_button'
 import MetricCard from '~/components/molecules/metric_card'
 import AdminPageHeader from '~/components/organisms/admin_page_header'
 import PeriodTabs from '~/components/organisms/reports/period_tabs'
+import ReceivedMoneyCard from '~/components/organisms/reports/received_money_card'
 import RevenueChart from '~/components/organisms/reports/revenue_chart'
 import TopServices from '~/components/organisms/reports/top_services'
 import AdminLayout from '~/components/templates/admin_layout'
@@ -17,7 +18,9 @@ import type { Sheet } from '~/lib/export/xlsx'
 import { costShare, costTotal, costsForPeriod, type Cost } from '~/lib/reports/costs'
 import {
   delta,
+  moneyRows,
   paymentMix,
+  receivedMoney,
   percentChange,
   dataRange,
   reportPeriod,
@@ -58,6 +61,8 @@ export default function AdminSummary({
   const current = period.current
   const previous = period.previous
   const mix = paymentMix(current)
+  const money = receivedMoney(current)
+  const previousMoney = receivedMoney(previous)
   const services = topServices(serviceDays, period.from, period.to, rank)
   const table = useDataTable(
     services.rows,
@@ -127,6 +132,12 @@ export default function AdminSummary({
                       previous.average,
                       percentChange(current.average, previous.average),
                     ],
+                    ...moneyRows(money, previousMoney).map(([label, now, before]) => [
+                      label,
+                      now,
+                      before,
+                      percentChange(now, before),
+                    ]),
                   ],
                 },
                 {
@@ -300,6 +311,7 @@ export default function AdminSummary({
                 </ul>
               </CardContent>
             </Card>
+            <ReceivedMoneyCard money={money} />
           </div>
         </div>
         <TopServices

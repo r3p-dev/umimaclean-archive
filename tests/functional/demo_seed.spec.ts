@@ -16,6 +16,8 @@ import { inertia, useApp } from '#tests/support/app'
 
 const STATUSES = Object.values(OrderStatus)
 
+const PAYMENT_REVIEW_ORDERS = 4
+
 const TIMESTAMPS = [
   ['orders', 'id', ['created_at', 'updated_at']],
   ['order_events', 'order_id', ['created_at']],
@@ -55,7 +57,7 @@ test.group('Demo seed', (group) => {
       const showcase = await Order.query()
         .preload('deliveryAddress')
         .orderBy('id', 'desc')
-        .limit(STATUSES.length * 2)
+        .limit(STATUSES.length * 2 + PAYMENT_REVIEW_ORDERS)
       const ids = showcase.map((order) => order.id)
       for (const status of STATUSES) {
         assert.isAtLeast(showcase.filter((order) => order.status === status).length, 2, status)

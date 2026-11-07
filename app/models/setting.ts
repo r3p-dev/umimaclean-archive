@@ -5,7 +5,7 @@ type StoreInfo = { name: string; whatsapp: string; address: string; hours: strin
 
 export type PickupSlotSetting = { label: string; capacity: number; on: boolean }
 
-type PaymentMethodSettings = { qris: boolean; cash: boolean; edc: boolean }
+type PaymentMethodSettings = { qris: boolean; cash: boolean }
 
 export type SettingValues = {
   store: StoreInfo
@@ -32,7 +32,7 @@ export const DEFAULT_SETTINGS: SettingValues = {
     { label: '12.00–15.00', capacity: 6, on: true },
     { label: '15.00–18.00', capacity: 4, on: true },
   ],
-  payment_methods: { qris: true, cash: true, edc: true },
+  payment_methods: { qris: true, cash: true },
   inactive_days: 60,
 }
 

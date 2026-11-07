@@ -27,6 +27,18 @@ router
       .post('/rekonsiliasi/:id/cek', [controllers.admin.Reconciliation, 'refresh'])
       .where('id', router.matchers.number())
       .as('reconciliation.refresh')
+    router
+      .post('/rekonsiliasi/:id/dikembalikan', [controllers.admin.Reconciliation, 'refunded'])
+      .as('reconciliation.refunded')
+    router
+      .post('/rekonsiliasi/:id/nominal', [controllers.admin.Reconciliation, 'mismatch'])
+      .as('reconciliation.mismatch')
+    router
+      .post('/rekonsiliasi/:id/cek-ulang', [controllers.admin.Reconciliation, 'recheck'])
+      .as('reconciliation.recheck')
+    router
+      .post('/rekonsiliasi/:id/ditangani', [controllers.admin.Reconciliation, 'handled'])
+      .as('reconciliation.handled')
     router.get('/laporan', [controllers.admin.Dashboard, 'reportsPage']).as('reports')
     router.post('/laporan/biaya', [controllers.admin.Dashboard, 'storeCost']).as('costs.store')
     router

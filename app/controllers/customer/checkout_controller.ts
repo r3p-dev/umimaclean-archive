@@ -25,7 +25,7 @@ export default class CheckoutController {
     const repeat = repeatId ? await this.orders.findOrderWithHistory(repeatId) : null
     const repeatItems =
       repeat && (await bouncer.with(OrderPolicy).allows('own', repeat))
-        ? { sepatu: repeat.itemsSepatu, tas: repeat.itemsTas, helm: repeat.itemsHelm }
+        ? { sepatu: repeat.itemsSepatu, tas: repeat.itemsTas, helm: 0 }
         : null
     return inertia.render('customer/order/create', {
       addresses: addresses.map((address) => new AddressTransformer(address).toObject()),

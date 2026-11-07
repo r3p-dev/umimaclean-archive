@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { inject } from '@adonisjs/core'
+import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import { ActivityAction } from '#enums/activity_enum'
 import { Role, RoleLabel, STAFF_ROLES } from '#enums/role_enum'
@@ -33,19 +34,28 @@ export default class StaffService {
       throw fieldError('phone', 'Nomor ini sudah dipakai akun lain.', 'phone.taken')
     }
     const password = temporaryPassword()
-    const user = await User.create({
-      name: payload.name,
-      phone: payload.phone,
-      password,
-      role: payload.role,
-      isActive: true,
-      phoneVerifiedAt: null,
-    })
-    await ActivityLog.record({
-      actor: owner,
-      action: ActivityAction.STAFF_CHANGED,
-      detail: `Menambah akun ${user.name} (${RoleLabel[payload.role]})`,
-      isSensitive: true,
+    const user = await db.transaction(async (transaction) => {
+      const created = await User.create(
+        {
+          name: payload.name,
+          phone: payload.phone,
+          password,
+          role: payload.role,
+          isActive: true,
+          phoneVerifiedAt: null,
+        },
+        { client: transaction }
+      )
+      await ActivityLog.record(
+        {
+          actor: owner,
+          action: ActivityAction.STAFF_CHANGED,
+          detail: `Menambah akun ${created.name} (${RoleLabel[payload.role]})`,
+          isSensitive: true,
+        },
+        transaction
+      )
+      return created
     })
     return { user, password }
   }
@@ -57,17 +67,23 @@ export default class StaffService {
     if (user.id === owner.id && payload.role !== Role.ADMIN) {
       throw fieldError('role', 'Anda tidak bisa menurunkan peran akun sendiri.', 'role.self')
     }
-    user.merge({
-      name: payload.name,
-      phone: payload.phone,
-      role: payload.role,
-    })
-    await user.save()
-    await ActivityLog.record({
-      actor: owner,
-      action: ActivityAction.STAFF_CHANGED,
-      detail: `Mengubah akun ${user.name} (${RoleLabel[payload.role]})`,
-      isSensitive: true,
+    await db.transaction(async (transaction) => {
+      user.useTransaction(transaction)
+      user.merge({
+        name: payload.name,
+        phone: payload.phone,
+        role: payload.role,
+      })
+      await user.save()
+      await ActivityLog.record(
+        {
+          actor: owner,
+          action: ActivityAction.STAFF_CHANGED,
+          detail: `Mengubah akun ${user.name} (${RoleLabel[payload.role]})`,
+          isSensitive: true,
+        },
+        transaction
+      )
     })
   }
 
@@ -76,14 +92,20 @@ export default class StaffService {
       throw fieldError('form', 'Ganti kata sandi Anda sendiri di halaman Profil.', 'staff.self')
     }
     const password = temporaryPassword()
-    user.merge({ password, passwordChangedAt: null })
-    await user.save()
-    await this.accounts.endSessions(user)
-    await ActivityLog.record({
-      actor: owner,
-      action: ActivityAction.STAFF_CHANGED,
-      detail: `Mereset kata sandi ${user.name}`,
-      isSensitive: true,
+    await db.transaction(async (transaction) => {
+      user.useTransaction(transaction)
+      user.merge({ password, passwordChangedAt: null })
+      await user.save()
+      await ActivityLog.record(
+        {
+          actor: owner,
+          action: ActivityAction.STAFF_CHANGED,
+          detail: `Mereset kata sandi ${user.name}`,
+          isSensitive: true,
+        },
+        transaction
+      )
+      await this.accounts.endSessions(user)
     })
     return { password }
   }
@@ -92,16 +114,22 @@ export default class StaffService {
     if (user.id === owner.id) {
       throw fieldError('form', 'Anda tidak bisa menonaktifkan akun sendiri.', 'staff.self')
     }
-    user.merge({ isActive })
-    await user.save()
-    if (!isActive) {
-      await this.accounts.endSessions(user)
-    }
-    await ActivityLog.record({
-      actor: owner,
-      action: ActivityAction.STAFF_CHANGED,
-      detail: `${isActive ? 'Mengaktifkan' : 'Menonaktifkan'} akun ${user.name}`,
-      isSensitive: true,
+    await db.transaction(async (transaction) => {
+      user.useTransaction(transaction)
+      user.merge({ isActive })
+      await user.save()
+      await ActivityLog.record(
+        {
+          actor: owner,
+          action: ActivityAction.STAFF_CHANGED,
+          detail: `${isActive ? 'Mengaktifkan' : 'Menonaktifkan'} akun ${user.name}`,
+          isSensitive: true,
+        },
+        transaction
+      )
+      if (!isActive) {
+        await this.accounts.endSessions(user)
+      }
     })
   }
 

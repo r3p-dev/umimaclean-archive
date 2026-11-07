@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import { Head, router } from '@inertiajs/react'
+import type { Data } from '@generated/data'
 import { IconCheck, IconPrinter, IconRefresh, IconWashMachine } from '@tabler/icons-react'
 import { urlFor } from '~/client'
 import { Button, LinkButton } from '~/components/ui/button'
@@ -11,10 +12,11 @@ import {
   CardHeader,
   CardTitle,
 } from '~/components/ui/card'
-import { FieldDescription, FieldError } from '~/components/ui/field'
+import { FieldError } from '~/components/ui/field'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import SourceTag from '~/components/atoms/source_tag'
+import BillItems from '~/components/organisms/payment/bill_items'
 import StaffMissingOrder from '~/components/organisms/staff_missing_order'
 import StaffTopBar from '~/components/organisms/staff_top_bar'
 import PaymentMethodPicker from '~/components/organisms/store/payment_method_picker'
@@ -29,27 +31,7 @@ import {
   type PaymentMethod,
 } from '~/lib/store/payment'
 
-type Receipt = {
-  number: string
-  customer: string
-  createdAt: string
-  items: {
-    name: string
-    kind: string
-    services: { name: string; price: number }[]
-    subtotal: number
-  }[]
-  total: number
-  payment: {
-    method: string
-    paidAt: string
-    reference: string | null
-    cashReceived: number | null
-    change: number | null
-  } | null
-  isSaved: boolean
-  isPaid: boolean
-}
+type Receipt = Data.Receipt & { isSaved: boolean; isPaid: boolean }
 
 type Qris = { qrUrl: string | null; expiresAt: string | null; status: string }
 
@@ -73,7 +55,6 @@ export default function StorePayment({
   )
   const [picked, setPicked] = useState<PaymentMethod | null>(null)
   const [received, setReceived] = useState<number | null>(null)
-  const [reference, setReference] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isBusy, setBusy] = useState(false)
   const fieldId = useId()
@@ -126,24 +107,13 @@ export default function StorePayment({
       )
       return
     }
-    if (method === 'edc' && !reference.trim()) {
-      setError('Isi nomor referensi dari struk EDC.')
-      return
-    }
-    if (method === 'edc' && reference.trim().length < 4) {
-      setError('Nomor referensi minimal 4 karakter.')
-      return
-    }
     router.post(
       urlFor('staff.store_payment.record', { id }),
-      method === 'cash'
-        ? { method: 'cash', cashReceived: received }
-        : { method: 'card', reference: reference.trim() },
+      { method: 'cash', cashReceived: received },
       {
         ...busy,
         preserveScroll: true,
-        onError: (errors) =>
-          setError(errors.cashReceived ?? errors.reference ?? errors.method ?? null),
+        onError: (errors) => setError(errors.cashReceived ?? errors.method ?? null),
       }
     )
   }
@@ -159,7 +129,7 @@ export default function StorePayment({
               ['Uang diterima', formatRupiah(payment.cashReceived)],
               ['Kembalian', formatRupiah(payment.change ?? 0)],
             ]
-          : [['No. referensi', payment.reference ?? '—']]),
+          : [['ID transaksi QRIS', payment.transactionId ?? '—']]),
       ]
     : []
 
@@ -179,25 +149,7 @@ export default function StorePayment({
             <CardTitle as="h2">Tagihan</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="divide-y divide-border">
-              {order.items.map((item, index) => (
-                <li key={index} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
-                  <span className="text-md font-semibold">{item.name}</span>
-                  {item.services.map((line) => (
-                    <div key={line.name} className="flex justify-between gap-3 text-sm">
-                      <span>{line.name}</span>
-                      <span>{formatRupiah(line.price)}</span>
-                    </div>
-                  ))}
-                </li>
-              ))}
-            </ul>
-            <div className="flex items-baseline justify-between border-t border-border-strong pt-3">
-              <span className="text-md leading-none font-semibold">Total</span>
-              <span className="text-2xl leading-none font-bold tracking-tight">
-                {formatRupiah(total)}
-              </span>
-            </div>
+            <BillItems items={order.items} extras={order.extras} total={total} />
           </CardContent>
         </Card>
 
@@ -328,30 +280,6 @@ export default function StorePayment({
                       )}
                     </div>
                   )}
-                  {method === 'edc' && (
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor={fieldId}>No. referensi / approval code</Label>
-                      <Input
-                        id={fieldId}
-                        autoComplete="off"
-                        value={reference}
-                        aria-invalid={error ? true : undefined}
-                        aria-describedby={`${fieldId}-hint`}
-                        onChange={(event) => {
-                          setReference(event.target.value.slice(0, 20))
-                          setError(null)
-                        }}
-                        className="font-mono text-base font-medium"
-                      />
-                      {error ? (
-                        <FieldError id={`${fieldId}-hint`}>{error}</FieldError>
-                      ) : (
-                        <FieldDescription id={`${fieldId}-hint`} className="text-caption">
-                          Lihat di struk EDC setelah kartu berhasil diproses.
-                        </FieldDescription>
-                      )}
-                    </div>
-                  )}
                   <Button size="cta" onPress={confirm} isPending={isBusy}>
                     {method === 'qris' && <IconRefresh />}
                     {isBusy
@@ -360,9 +288,7 @@ export default function StorePayment({
                         ? qris && remaining > 0
                           ? 'Cek Pembayaran QRIS'
                           : 'Buat Kode QRIS'
-                        : method === 'cash'
-                          ? `Terima Tunai · ${formatRupiah(total)}`
-                          : `Konfirmasi EDC · ${formatRupiah(total)}`}
+                        : `Terima Tunai · ${formatRupiah(total)}`}
                   </Button>
                 </>
               ) : (

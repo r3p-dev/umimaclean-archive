@@ -21,9 +21,7 @@ export default function Hero() {
           Antar-jemput · Bandung Raya
         </Badge>
 
-        <h1 className="text-display text-balance">
-          Sepatu, tas, dan helm bersih tanpa keluar rumah.
-        </h1>
+        <h1 className="text-display text-balance">Sepatu dan tas bersih tanpa keluar rumah.</h1>
 
         <p className="max-w-130 text-lead text-pretty text-foreground-secondary">
           Kami jemput barang Anda, periksa kondisinya, lalu cuci dengan layanan yang paling sesuai.

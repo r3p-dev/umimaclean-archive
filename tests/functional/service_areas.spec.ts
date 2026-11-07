@@ -17,6 +17,7 @@ import {
   inertia,
   orderPayload,
   post,
+  postWalkIn,
   savedAddress,
   send,
   useApp,
@@ -120,7 +121,7 @@ test.group('Service areas', (group) => {
   test('a walk-in delivery point must be in an active area', async ({ client, assert }) => {
     const staff = await UserFactory.apply('staff').create()
     const walkIn = (point: { lat: number; lng: number }) =>
-      post(client, '/staf/transaksi', {
+      postWalkIn(client, {
         phone: '0812 7777 8888',
         name: 'Andi Pratama',
         items: { sepatu: 1, tas: 0, helm: 0 },

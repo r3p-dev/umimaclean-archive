@@ -3,7 +3,7 @@ import { DateTime } from 'luxon'
 import { ActivityAction, ActivityActionLabel, ActivityCategoryOf } from '#enums/activity_enum'
 import { type CostCategory, CostCategoryLabel } from '#enums/cost_enum'
 import { ItemKindLabel, type ItemKind } from '#enums/order_enum'
-import { PaymentStatus } from '#enums/payment_enum'
+import { PAYMENT_RECEIVED_STATUSES, PaymentStatus } from '#enums/payment_enum'
 import { Role } from '#enums/role_enum'
 import { maskPhone } from '#helpers/phone'
 import { formatRupiah } from '#helpers/money'
@@ -23,7 +23,9 @@ type DayRow = [
   online: number,
   storeQris: number,
   cash: number,
-  edc: number,
+  refundDue: number,
+  mismatch: number,
+  refunded: number,
 ]
 
 type ServiceRow = [date: string, name: string, category: string, items: number, revenue: number]
@@ -39,6 +41,7 @@ type CustomerRow = {
   first_paid: Date | null
   orders: string
   spend: string
+  held: string
   address_text: string | null
 }
 
@@ -59,7 +62,7 @@ export default class ReportService {
     const today = this.reportToday()
     const earliest = await db
       .from('payments as p')
-      .where('p.status', 'paid')
+      .whereIn('p.status', [...PAYMENT_RECEIVED_STATUSES])
       .select(db.raw(`to_char(min(${LOCAL_DAY}), 'YYYY-MM-DD') as day`))
       .first()
     const first = earliest?.day ? DateTime.fromISO(earliest.day, { zone: SERVICE_ZONE }) : today
@@ -73,9 +76,11 @@ export default class ReportService {
     const result = await db.rawQuery<{ rows: Record<string, string>[] }>(
       `with series as (
         select generate_series(?::date, ?::date, interval '1 day')::date as day
+      ), received as (
+        select ${LOCAL_DAY} as day, p.amount, p.method, p.channel, p.order_id, p.status
+        from payments p where p.status in (?, ?, ?, ?)
       ), paid as (
-        select ${LOCAL_DAY} as day, p.amount, p.method, p.channel, p.order_id
-        from payments p where p.status = 'paid'
+        select * from received where status = ?
       )
       select to_char(s.day, 'YYYY-MM-DD') as day,
         coalesce(sum(paid.amount), 0) as revenue,
@@ -84,10 +89,20 @@ export default class ReportService {
         coalesce(sum(paid.amount) filter (where paid.channel = 'online'), 0) as online,
         coalesce(sum(paid.amount) filter (where paid.channel = 'counter' and paid.method = 'qris'), 0) as store_qris,
         coalesce(sum(paid.amount) filter (where paid.method = 'cash'), 0) as cash,
-        coalesce(sum(paid.amount) filter (where paid.method = 'card'), 0) as edc
+        (select coalesce(sum(r.amount), 0) from received r where r.day = s.day and r.status = ?) as refund_due,
+        (select coalesce(sum(r.amount), 0) from received r where r.day = s.day and r.status = ?) as mismatch,
+        (select coalesce(sum(r.amount), 0) from received r where r.day = s.day and r.status = ?) as refunded
       from series s left join paid on paid.day = s.day
       group by s.day order by s.day`,
-      [start.toISODate(), end.toISODate()]
+      [
+        start.toISODate(),
+        end.toISODate(),
+        ...PAYMENT_RECEIVED_STATUSES,
+        PaymentStatus.PAID,
+        PaymentStatus.REFUND_DUE,
+        PaymentStatus.AMOUNT_MISMATCH,
+        PaymentStatus.REFUNDED,
+      ]
     )
     return {
       start: start.toISODate()!,
@@ -100,7 +115,9 @@ export default class ReportService {
         Number(row.online),
         Number(row.store_qris),
         Number(row.cash),
-        Number(row.edc),
+        Number(row.refund_due),
+        Number(row.mismatch),
+        Number(row.refunded),
       ]),
     }
   }
@@ -176,6 +193,8 @@ export default class ReportService {
       `select u.id, u.name, u.phone, u.created_at,
         max(p.paid_at) as last_paid, min(p.paid_at) as first_paid,
         count(distinct p.order_id) as orders, coalesce(sum(p.amount), 0) as spend,
+        (select coalesce(sum(h.amount), 0) from payments h join orders ho on ho.id = h.order_id
+          where ho.user_id = u.id and h.status in (?, ?)) as held,
         (select a.address_text from customer_addresses a
           where a.user_id = u.id and a.is_primary limit 1) as address_text
       from users u
@@ -184,7 +203,7 @@ export default class ReportService {
       where u.role = ?
       group by u.id
       order by last_paid desc nulls last`,
-      [PaymentStatus.PAID, Role.CUSTOMER]
+      [PaymentStatus.REFUND_DUE, PaymentStatus.AMOUNT_MISMATCH, PaymentStatus.PAID, Role.CUSTOMER]
     )
     const today = DateTime.now().setZone(SERVICE_ZONE).startOf('day')
 
@@ -202,6 +221,7 @@ export default class ReportService {
         first: isoDate(first),
         orders: Number(row.orders),
         spend: Number(row.spend),
+        held: Number(row.held),
         days: Math.max(
           0,
           Math.floor(

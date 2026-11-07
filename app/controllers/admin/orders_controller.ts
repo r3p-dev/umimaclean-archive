@@ -16,7 +16,6 @@ import {
 const FIX_METHOD = {
   qris_counter: { method: PaymentMethod.QRIS, channel: PaymentChannel.COUNTER },
   cash: { method: PaymentMethod.CASH, channel: PaymentChannel.COUNTER },
-  card: { method: PaymentMethod.CARD, channel: PaymentChannel.COUNTER },
   qris_online: { method: PaymentMethod.QRIS, channel: PaymentChannel.ONLINE },
 } as const
 
@@ -66,9 +65,13 @@ export default class OrdersController {
       payload.ids,
       payload.stage
     )
+    const failed = result.failed.map((entry) => `${entry.number} (${entry.reason})`).join(', ')
     session.flash(
-      result.changed ? 'success' : 'error',
-      `${result.changed} pesanan diubah${result.skipped ? `, ${result.skipped} dilewati karena tidak bisa ke status ini` : ''}. Tercatat di Aktivitas Staf.`
+      result.moved.length ? 'success' : 'error',
+      [
+        `${result.moved.length} pesanan diubah${result.moved.length ? ' dan tercatat di Aktivitas Staf' : ''}.`,
+        ...(failed ? [`Tidak diubah: ${failed}.`] : []),
+      ].join(' ')
     )
     return response.redirect().back()
   }

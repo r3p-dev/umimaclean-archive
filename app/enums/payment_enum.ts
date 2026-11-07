@@ -11,13 +11,11 @@ export const PaymentChannelLabel = {
 export const PaymentMethod = {
   QRIS: 'qris',
   CASH: 'cash',
-  CARD: 'card',
 } as const
 
 export const PaymentMethodLabel = {
   [PaymentMethod.QRIS]: 'QRIS',
   [PaymentMethod.CASH]: 'Tunai',
-  [PaymentMethod.CARD]: 'EDC',
 } as const
 
 export const PaymentStatus = {
@@ -26,7 +24,18 @@ export const PaymentStatus = {
   EXPIRED: 'expired',
   CANCELLED: 'cancelled',
   FAILED: 'failed',
+  CANCEL_FAILED: 'cancel_failed',
+  REFUND_DUE: 'refund_due',
+  AMOUNT_MISMATCH: 'amount_mismatch',
+  REFUNDED: 'refunded',
 } as const
+
+export const PAYMENT_RECEIVED_STATUSES: readonly PaymentStatus[] = [
+  PaymentStatus.PAID,
+  PaymentStatus.REFUND_DUE,
+  PaymentStatus.AMOUNT_MISMATCH,
+  PaymentStatus.REFUNDED,
+]
 
 export const PaymentStatusLabel = {
   [PaymentStatus.PENDING]: 'Menunggu',
@@ -34,6 +43,10 @@ export const PaymentStatusLabel = {
   [PaymentStatus.EXPIRED]: 'Kedaluwarsa',
   [PaymentStatus.CANCELLED]: 'Dibatalkan',
   [PaymentStatus.FAILED]: 'Gagal',
+  [PaymentStatus.CANCEL_FAILED]: 'Gagal dibatalkan',
+  [PaymentStatus.REFUND_DUE]: 'Perlu refund',
+  [PaymentStatus.AMOUNT_MISMATCH]: 'Nominal tidak cocok',
+  [PaymentStatus.REFUNDED]: 'Sudah dikembalikan',
 } as const
 
 export type PaymentChannel = (typeof PaymentChannel)[keyof typeof PaymentChannel]

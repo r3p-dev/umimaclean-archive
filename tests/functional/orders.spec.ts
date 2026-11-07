@@ -9,7 +9,9 @@ import {
   inertia,
   orderPayload,
   post,
+  postWalkIn,
   savedAddress,
+  seedCatalogue,
   send,
   useApp,
 } from '#tests/support/app'
@@ -137,11 +139,9 @@ test.group('Orders', (group) => {
     const intruder = await UserFactory.create()
     const order = await createOrder(owner)
 
-    for (const path of ['', '/tagihan']) {
-      const response = await inertia(client, `/pesanan/${order.id}${path}`).loginAs(intruder)
-      response.assertInertiaComponent('customer/orders/unlock')
-      assert.notProperty(response.inertiaProps, 'order')
-    }
+    const response = await inertia(client, `/pesanan/${order.id}`).loginAs(intruder)
+    response.assertInertiaComponent('customer/orders/unlock')
+    assert.notProperty(response.inertiaProps, 'order')
     const pay = await client.get(`/pesanan/${order.id}/bayar`).loginAs(intruder)
     pay.assertStatus(404)
     const own = await inertia(client, `/pesanan/${order.id}`).loginAs(owner)
@@ -178,5 +178,86 @@ test.group('Orders', (group) => {
     await createOrder(user)
     const returning = await inertia(client, '/beranda').loginAs(user)
     returning.assertInertiaComponent('customer/home/index')
+  })
+})
+
+test.group('Helmets are washed only at the shop', (group) => {
+  useApp(group)
+
+  test('an online order with helmets is refused even when crafted by hand', async ({
+    client,
+    assert,
+  }) => {
+    const user = await UserFactory.create()
+    const address = await savedAddress(user, { isPrimary: true })
+
+    const response = await post(
+      client,
+      '/pesan/tinjau',
+      orderPayload(address.id, { items: { sepatu: 1, tas: 0, helm: 1 } })
+    ).loginAs(user)
+
+    response.assertStatus(422)
+    response.assertBodyContains({
+      errors: [
+        {
+          field: 'items.helm',
+          message: 'Cuci helm hanya untuk barang yang dibawa langsung ke toko.',
+        },
+      ],
+    })
+    assert.lengthOf(await Order.all(), 0)
+  })
+
+  test('helmets cannot be added while inspecting an online order', async ({ client, assert }) => {
+    const [, , , helmetSpa] = await seedCatalogue()
+    const staff = await UserFactory.apply('staff').create()
+    const order = await createOrder(await UserFactory.create(), {
+      status: OrderStatus.IN_INSPECTION,
+    })
+
+    const response = await post(client, `/staf/proses/${order.id}/periksa`, {
+      items: [{ kind: 'helmet', itemName: 'Helm', services: { main: helmetSpa.id, addons: [] } }],
+    }).loginAs(staff)
+
+    response.assertStatus(422)
+    response.assertBodyContains({ errors: [{ field: 'items.0.kind', rule: 'item.store_only' }] })
+    await order.refresh()
+    assert.equal(order.status, OrderStatus.IN_INSPECTION)
+  })
+
+  test('a walk-in can still bring and bill helmets', async ({ client, assert }) => {
+    const [, , , helmetSpa] = await seedCatalogue()
+    const staff = await UserFactory.apply('staff').create()
+
+    await postWalkIn(client, {
+      phone: '0812 7777 8888',
+      name: 'Andi Pratama',
+      items: { sepatu: 0, tas: 0, helm: 1 },
+      returnMethod: 'store',
+    }).loginAs(staff)
+    const order = await Order.firstOrFail()
+    assert.equal(order.itemsHelm, 1)
+
+    const billed = await post(client, `/staf/proses/${order.id}/periksa`, {
+      items: [{ kind: 'helmet', itemName: 'Helm', services: { main: helmetSpa.id, addons: [] } }],
+    }).loginAs(staff)
+    billed.assertStatus(302)
+    await order.refresh()
+    assert.equal(order.status, OrderStatus.AWAITING_PAYMENT)
+  })
+
+  test('the landing price list marks the helmet tab as shop-only', async ({ client }) => {
+    await seedCatalogue()
+
+    const page = await inertia(client, '/')
+
+    page.assertInertiaPropsContains({
+      prices: [
+        { label: 'Sepatu', isStoreOnly: false },
+        { label: 'Tas', isStoreOnly: false },
+        { label: 'Helm', isStoreOnly: true },
+      ],
+    })
   })
 })

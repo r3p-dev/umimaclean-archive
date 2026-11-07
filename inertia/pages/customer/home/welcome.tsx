@@ -79,7 +79,7 @@ export default function CustomerWelcome({
                   Pesan penjemputan pertama Anda
                 </CardTitle>
                 <CardDescription className="text-md leading-normal text-foreground-secondary">
-                  Kurir menjemput sepatu, tas, atau helm Anda. Bayar setelah tahu harganya.
+                  Kurir menjemput sepatu atau tas Anda. Bayar setelah tahu harganya.
                 </CardDescription>
               </CardHeader>
               {/* Slots stack vertically by design; in this sm: row their side padding doubles, so pull the button back to the reference 24px gap. */}

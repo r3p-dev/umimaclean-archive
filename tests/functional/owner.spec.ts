@@ -2,7 +2,7 @@ import { test } from '@japa/runner'
 import { DateTime } from 'luxon'
 import { UserFactory } from '#database/factories/user_factory'
 import { ActivityAction } from '#enums/activity_enum'
-import { OrderStatus } from '#enums/order_enum'
+import { OrderSource, OrderStatus, ReturnMethod } from '#enums/order_enum'
 import { PaymentStatus } from '#enums/payment_enum'
 import ActivityLog from '#models/activity_log'
 import Bill from '#models/bill'
@@ -176,7 +176,7 @@ test.group('Owner tools', (group) => {
         { label: '12.00–15.00', capacity: 6, on: false },
         { label: '15.00–18.00', capacity: 4, on: true },
       ],
-      payments: { qris: true, cash: true, edc: true },
+      payments: { qris: true, cash: true },
       inactiveDays: 60,
     }).loginAs(owner)
 
@@ -209,6 +209,76 @@ test.group('Owner tools', (group) => {
     await awaiting.refresh()
     assert.equal(pickedUp.status, OrderStatus.IN_INSPECTION)
     assert.equal(awaiting.status, OrderStatus.AWAITING_PAYMENT)
+  })
+
+  test('owner bulk move only takes the two steps that need no staff proof', async ({
+    client,
+    assert,
+  }) => {
+    const owner = await UserFactory.apply('admin').create()
+    const customer = await UserFactory.create()
+    const pickedUp = await createOrder(customer, { status: OrderStatus.PICKED_UP })
+    const atShop = await createOrder(customer, {
+      status: OrderStatus.READY_FOR_COLLECTION,
+      source: OrderSource.STORE,
+      returnMethod: ReturnMethod.STORE,
+    })
+    const enRoute = await createOrder(customer, { status: OrderStatus.COURIER_EN_ROUTE })
+
+    const list = await inertia(client, '/admin/pesanan').loginAs(owner)
+    const next = Object.fromEntries(
+      (list.inertiaProps as { orders: { id: string; next: string[] }[] }).orders.map((row) => [
+        row.id,
+        row.next,
+      ])
+    )
+    assert.deepEqual(next[String(pickedUp.id)], ['periksa'])
+    assert.deepEqual(next[String(atShop.id)], ['selesai'])
+    assert.deepEqual(next[String(enRoute.id)], [])
+
+    const toInspection = await post(client, '/admin/pesanan/status', {
+      ids: [pickedUp.id, enRoute.id],
+      stage: 'periksa',
+    }).loginAs(owner)
+    const toDone = await post(client, '/admin/pesanan/status', {
+      ids: [atShop.id],
+      stage: 'selesai',
+    }).loginAs(owner)
+
+    await pickedUp.refresh()
+    await atShop.refresh()
+    await enRoute.refresh()
+    assert.equal(pickedUp.status, OrderStatus.IN_INSPECTION)
+    assert.equal(atShop.status, OrderStatus.COMPLETED)
+    assert.equal(enRoute.status, OrderStatus.COURIER_EN_ROUTE)
+    assert.equal(
+      toInspection.flashMessages().success,
+      `1 pesanan diubah dan tercatat di Aktivitas Staf. Tidak diubah: ${enRoute.number()} (tidak bisa diubah massal ke status ini).`
+    )
+    assert.equal(toDone.flashMessages().success, '1 pesanan diubah dan tercatat di Aktivitas Staf.')
+  })
+
+  test('owner bulk move refuses every transition that needs proof', async ({ client, assert }) => {
+    const owner = await UserFactory.apply('admin').create()
+    const customer = await UserFactory.create()
+    const washing = await createOrder(customer, { status: OrderStatus.IN_CLEANING })
+    const waiting = await createOrder(customer, { status: OrderStatus.AWAITING_PICKUP })
+    const inspecting = await createOrder(customer, { status: OrderStatus.IN_INSPECTION })
+
+    for (const stage of ['jemput', 'bayar', 'cuci', 'antar', 'batal']) {
+      const refused = await post(client, '/admin/pesanan/status', {
+        ids: [washing.id, waiting.id, inspecting.id],
+        stage,
+      }).loginAs(owner)
+      refused.assertStatus(422)
+      refused.assertBodyContains({ errors: [{ field: 'stage' }] })
+    }
+
+    for (const order of [washing, waiting, inspecting]) {
+      const status = order.status
+      await order.refresh()
+      assert.equal(order.status, status)
+    }
   })
 
   test('staff cannot use owner actions', async ({ client, assert }) => {

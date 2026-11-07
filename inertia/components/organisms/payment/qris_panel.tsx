@@ -127,8 +127,8 @@ export default function QrisPanel({
             </>
           )}
           <BackLink
-            href={urlFor('customer.orders.bill', { id })}
-            label="Kembali ke Rincian Tagihan"
+            href={urlFor('customer.orders.show', { id })}
+            label="Kembali ke Pesanan"
             className="ml-0 self-stretch"
           />
         </div>

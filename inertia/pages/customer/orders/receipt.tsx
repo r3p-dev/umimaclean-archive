@@ -4,6 +4,7 @@ import type { Data } from '@generated/data'
 import { urlFor } from '~/client'
 import Logo from '~/components/atoms/logo'
 import BackLink from '~/components/molecules/back_link'
+import BillItems from '~/components/organisms/payment/bill_items'
 import AccountLayout from '~/components/templates/account_layout'
 import { Button } from '~/components/ui/button'
 import {
@@ -46,30 +47,8 @@ export default function OrderReceipt({ receipt, store }: { receipt: Data.Receipt
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="flex flex-col gap-3">
-                {receipt.items.map((item, index) => (
-                  <li key={`${item.name}-${index}`} className="flex flex-col gap-1">
-                    <span className="flex justify-between gap-3 text-md font-semibold">
-                      <span>{item.name}</span>
-                      <span className="tabular-nums">{formatRupiah(item.subtotal)}</span>
-                    </span>
-                    {item.services.map((service) => (
-                      <span
-                        key={service.name}
-                        className="flex justify-between gap-3 text-sm text-foreground-secondary"
-                      >
-                        <span>{service.name}</span>
-                        <span className="tabular-nums">{formatRupiah(service.price)}</span>
-                      </span>
-                    ))}
-                  </li>
-                ))}
-              </ul>
+              <BillItems items={receipt.items} extras={receipt.extras} total={receipt.total} />
               <dl className="flex flex-col gap-2 border-t border-dashed border-border-strong pt-4 text-sm">
-                <div className="flex justify-between text-lg font-bold">
-                  <dt>Total</dt>
-                  <dd className="tabular-nums">{formatRupiah(receipt.total)}</dd>
-                </div>
                 {payment && (
                   <>
                     <div className="flex justify-between">
@@ -90,10 +69,10 @@ export default function OrderReceipt({ receipt, store }: { receipt: Data.Receipt
                         <dd className="tabular-nums">{formatRupiah(payment.change)}</dd>
                       </div>
                     )}
-                    {payment.reference && (
+                    {payment.transactionId && (
                       <div className="flex justify-between gap-3">
-                        <dt className="text-muted-foreground">Referensi</dt>
-                        <dd className="font-mono text-meta">{payment.reference}</dd>
+                        <dt className="text-muted-foreground">ID transaksi QRIS</dt>
+                        <dd className="font-mono text-meta">{payment.transactionId}</dd>
                       </div>
                     )}
                   </>

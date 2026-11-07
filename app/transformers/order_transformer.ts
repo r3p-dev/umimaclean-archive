@@ -1,18 +1,18 @@
 import { BaseTransformer } from '@adonisjs/core/transformers'
 import type { DateTime } from 'luxon'
 import {
-  ItemKindLabel,
   OrderStatus,
   OrderStatusLabel,
   PhotoKind,
-  orderStatusIndex,
   type ReturnMethod,
+  orderStatusIndex,
 } from '#enums/order_enum'
 import { PaymentMethodLabel, PaymentStatus } from '#enums/payment_enum'
 import type Order from '#models/order'
 import type OrderAddress from '#models/order_address'
 import type OrderPhoto from '#models/order_photo'
 import type Payment from '#models/payment'
+import { billBreakdown } from '#helpers/bill'
 import { displayPhone, maskPhone } from '#helpers/phone'
 import { SERVICE_ZONE } from '#validators/shared/rules/pickup'
 
@@ -44,24 +44,12 @@ function addressOf(address: OrderAddress, canSeePhones: boolean) {
 }
 
 function billOf(order: Order) {
-  const bill = order.bill
-  if (!bill) {
+  const breakdown = billBreakdown(order)
+  if (!breakdown) {
     return null
   }
-  const sentAt = formatEvent(bill.createdAt)
-  return {
-    total: bill.total,
-    lines: order.items.map((item) => ({
-      name: item.name,
-      kind: ItemKindLabel[item.kind],
-      note: item.note,
-      services: bill.lines
-        .filter((line) => line.orderItemId === item.id)
-        .map((line) => ({ name: line.name, price: line.price })),
-    })),
-    decidedAt: sentAt,
-    sentAt,
-  }
+  const sentAt = formatEvent(order.bill.createdAt)
+  return { ...breakdown, decidedAt: sentAt, sentAt }
 }
 
 function proofOf(order: Order, kind: PhotoKind) {

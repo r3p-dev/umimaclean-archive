@@ -39,8 +39,9 @@ test.group('Order tracking without an account', (group) => {
     page.assertInertiaComponent('customer/orders/show')
     page.assertInertiaPropsContains({ order: { number: order.number() }, isOwner: false })
 
-    const bill = await inertia(client, `/pesanan/${order.id}/tagihan`, unlocked.session())
-    bill.assertInertiaComponent('customer/payment/bill')
+    const oldBill = await client.get(`/pesanan/${order.id}/tagihan`).redirects(0)
+    oldBill.assertStatus(302)
+    oldBill.assertHeader('location', `/pesanan/${order.id}`)
 
     const fresh = await inertia(client, `/pesanan/${order.id}`)
     fresh.assertInertiaComponent('customer/orders/unlock')
@@ -146,7 +147,7 @@ test.group('Order tracking without an account', (group) => {
       digits: lastFourDigits(user.phone),
     })
 
-    for (const url of [`/pesanan/${order.id}`, `/pesanan/${order.id}/tagihan`]) {
+    for (const url of [`/pesanan/${order.id}`]) {
       const guest = await inertia(client, url, unlocked.session())
       guest.assertInertiaPropsContains({
         isOwner: false,

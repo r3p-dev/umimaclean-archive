@@ -16,7 +16,7 @@ const ITEMS = [
   },
   {
     name: 'Helm',
-    description: 'Half-face, full-face',
+    description: 'Half-face, full-face · bawa ke toko',
     src: '/images/landing/helmet',
     alt: 'Foto helm',
   },

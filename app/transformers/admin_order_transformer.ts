@@ -14,7 +14,15 @@ function areaOf(order: Order) {
   return parts.length >= 2 ? parts[parts.length - 2] : parts[0] || '—'
 }
 
+const HELD_STATUSES: PaymentStatus[] = [PaymentStatus.REFUND_DUE, PaymentStatus.AMOUNT_MISMATCH]
+
 function paymentLabelOf(order: Order) {
+  const label = paidLabelOf(order)
+  const isHeld = order.payments?.some((payment) => HELD_STATUSES.includes(payment.status))
+  return isHeld ? `${label} · QRIS perlu dicek` : label
+}
+
+function paidLabelOf(order: Order) {
   const paid = order.payments?.find((payment) => payment.status === PaymentStatus.PAID)
   if (order.status === OrderStatus.CANCELLED) {
     return paid ? `Lunas · ${PaymentMethodLabel[paid.method]} · perlu refund` : 'Tidak ada tagihan'

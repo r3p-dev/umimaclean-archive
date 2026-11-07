@@ -17,17 +17,10 @@ import StatusBadge from '~/components/atoms/status_badge'
 import BackLink from '~/components/molecules/back_link'
 import AccountLayout from '~/components/templates/account_layout'
 import { Button, LinkButton } from '~/components/ui/button'
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '~/components/ui/card'
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { CancelDialog } from '~/components/organisms/orders/bulk_order_dialogs'
+import BillItems from '~/components/organisms/payment/bill_items'
 import { shortStreet } from '~/lib/order/addresses'
-import { billRows } from '~/lib/payment/bill'
 import { formatDate } from '~/lib/shared/date'
 import type { OrderRecord } from '~/lib/tracking/orders'
 import { buildTracking, CANCELLED, COMPLETED } from '~/lib/tracking/status'
@@ -47,7 +40,7 @@ export default function OrderDetail({ order, isOwner }: { order: OrderRecord; is
   const [isCancelling, setCancelling] = useState(false)
   const view = buildTracking(order)
   const timeline = orderTimeline(order)
-  const rows = order.bill && view.servicesKnown ? billRows(order.bill) : null
+  const bill = order.bill && view.servicesKnown ? order.bill : null
   const pickup = order.pickupAddress
   const delivery = order.deliveryAddress
   const recipient = order.returnMethod === 'store' ? null : (delivery ?? pickup)
@@ -76,16 +69,20 @@ export default function OrderDetail({ order, isOwner }: { order: OrderRecord; is
           </LinkButton>
         </CardContent>
       )}
+      {view.needsPay && !isOwner && (
+        <CardContent>
+          <p className="text-foreground-secondary">
+            {order.source === 'store'
+              ? 'Pembayaran dilakukan di kasir toko.'
+              : 'Bayar di toko, atau masuk ke akun pemesan untuk membayar dengan QRIS.'}
+          </p>
+        </CardContent>
+      )}
       {!view.needsPay && (
         <CardContent>
           <p className="text-success-foreground">{view.payment.label}</p>
         </CardContent>
       )}
-      <CardFooter>
-        <LinkButton href={urlFor('customer.orders.bill', { id: order.id })} variant="link">
-          Lihat rincian tagihan
-        </LinkButton>
-      </CardFooter>
     </Card>
   )
 
@@ -108,33 +105,12 @@ export default function OrderDetail({ order, isOwner }: { order: OrderRecord; is
             <Card role="region" aria-labelledby="items-title">
               <CardHeader>
                 <CardTitle as="h2" id="items-title">
-                  Barang & layanan
+                  {bill ? 'Rincian tagihan' : 'Barang & layanan'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {rows ? (
-                  <>
-                    <ul className="divide-y divide-border">
-                      {rows.map((row, index) => (
-                        <li
-                          key={`${row.name}-${index}`}
-                          className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0"
-                        >
-                          <span className="flex flex-col gap-1">
-                            <span className="text-md font-medium">{row.name}</span>
-                            <span className="text-meta text-foreground-secondary">
-                              {row.services.map((service) => service.name).join(' + ')}
-                            </span>
-                          </span>
-                          <span className="text-md font-medium tabular-nums">{row.subtotal}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="flex items-center justify-between border-t border-border pt-3 text-lg leading-none font-bold">
-                      <span>Total</span>
-                      <span className="tabular-nums">{view.total}</span>
-                    </p>
-                  </>
+                {bill ? (
+                  <BillItems items={bill.items} extras={bill.extras} total={bill.total} />
                 ) : (
                   <div className="flex flex-col gap-1">
                     <p className="text-md font-medium">{view.itemsSummary}</p>

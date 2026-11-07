@@ -47,6 +47,8 @@ export const ItemKind = {
   HELMET: 'helmet',
 } as const
 
+export const STORE_ONLY_ITEM_KINDS: readonly ItemKind[] = [ItemKind.HELMET]
+
 export const ItemKindLabel = {
   [ItemKind.SHOE]: 'Sepatu',
   [ItemKind.BAG]: 'Tas',
@@ -107,3 +109,12 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   [OrderStatus.COMPLETED]: [],
   [OrderStatus.CANCELLED]: [],
 }
+
+export const OWNER_BULK_MOVES: Partial<Record<OrderStatus, OrderStatus>> = {
+  [OrderStatus.PICKED_UP]: OrderStatus.IN_INSPECTION,
+  [OrderStatus.READY_FOR_COLLECTION]: OrderStatus.COMPLETED,
+}
+
+export const OWNER_BULK_STAGES = [
+  ...new Set(Object.values(OWNER_BULK_MOVES).map((status) => OrderStatusStage[status])),
+]

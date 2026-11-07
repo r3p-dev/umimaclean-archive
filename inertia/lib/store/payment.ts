@@ -1,11 +1,10 @@
 import { formatRupiah } from '~/lib/shared/format'
 
-export type PaymentMethod = 'qris' | 'cash' | 'edc'
+export type PaymentMethod = 'qris' | 'cash'
 
 export const PAYMENT_METHODS: { key: PaymentMethod; label: string }[] = [
   { key: 'qris', label: 'QRIS' },
   { key: 'cash', label: 'Tunai' },
-  { key: 'edc', label: 'EDC' },
 ]
 
 export function parseRupiah(value: string) {

@@ -1,14 +1,7 @@
 import { useId, useState, type ComponentType, type SVGProps } from 'react'
 import { Head } from '@inertiajs/react'
 import { toast } from 'sonner'
-import {
-  IconCash,
-  IconCreditCard,
-  IconDeviceFloppy,
-  IconMinus,
-  IconPlus,
-  IconQrcode,
-} from '@tabler/icons-react'
+import { IconCash, IconDeviceFloppy, IconMinus, IconPlus, IconQrcode } from '@tabler/icons-react'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Field, FieldDescription, FieldError, FieldLabel } from '~/components/ui/field'
@@ -30,7 +23,6 @@ import {
 const PAY_ICONS: Record<StorePayKey, ComponentType<SVGProps<SVGSVGElement>>> = {
   qris: IconQrcode,
   cash: IconCash,
-  edc: IconCreditCard,
 }
 
 export default function AdminStoreSettings({
@@ -52,7 +44,7 @@ export default function AdminStoreSettings({
 
   function togglePay(key: StorePayKey) {
     const next = { ...draft.payments, [key]: !draft.payments[key] }
-    if (!next.qris && !next.cash && !next.edc) {
+    if (!next.qris && !next.cash) {
       setPayWarning(true)
       return
     }

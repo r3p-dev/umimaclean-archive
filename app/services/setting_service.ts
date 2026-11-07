@@ -1,3 +1,4 @@
+import db from '@adonisjs/lucid/services/db'
 import { ActivityAction } from '#enums/activity_enum'
 import ActivityLog from '#models/activity_log'
 import { PHOTO_RETENTION_DAYS } from '#models/order_photo'
@@ -21,19 +22,28 @@ export default class SettingService {
   }
 
   async saveStoreSettings(owner: User, payload: StoreSettingsPayload) {
-    await Setting.put('store', {
-      name: payload.storeName,
-      whatsapp: payload.whatsapp,
-      address: payload.storeAddress,
-      hours: payload.hours,
-    })
-    await Setting.put('pickup_slots', payload.slots)
-    await Setting.put('payment_methods', payload.payments)
-    await Setting.put('inactive_days', payload.inactiveDays)
-    await ActivityLog.record({
-      actor: owner,
-      action: ActivityAction.SETTINGS_CHANGED,
-      detail: `Profil toko, slot (${payload.slots.map((slot) => (slot.on ? slot.capacity : 'tutup')).join('/')}), metode bayar`,
+    await db.transaction(async (transaction) => {
+      await Setting.put(
+        'store',
+        {
+          name: payload.storeName,
+          whatsapp: payload.whatsapp,
+          address: payload.storeAddress,
+          hours: payload.hours,
+        },
+        transaction
+      )
+      await Setting.put('pickup_slots', payload.slots, transaction)
+      await Setting.put('payment_methods', payload.payments, transaction)
+      await Setting.put('inactive_days', payload.inactiveDays, transaction)
+      await ActivityLog.record(
+        {
+          actor: owner,
+          action: ActivityAction.SETTINGS_CHANGED,
+          detail: `Profil toko, slot (${payload.slots.map((slot) => (slot.on ? slot.capacity : 'tutup')).join('/')}), metode bayar`,
+        },
+        transaction
+      )
     })
   }
 }

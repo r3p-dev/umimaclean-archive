@@ -20,6 +20,7 @@ export type CustomerRow = {
   first: string
   orders: number
   spend: number
+  held: number
   days: number
   isNew: boolean
   hasPaid: boolean

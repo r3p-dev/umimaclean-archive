@@ -4,7 +4,7 @@ import { Dialog, DialogClose, DialogDescription } from '~/components/ui/dialog'
 import { FieldError } from '~/components/ui/field'
 import ChoicePills from '~/components/molecules/choice_pills'
 import DialogTitleBar from '~/components/molecules/dialog_title_bar'
-import { STAGE_FILTERS, STAGE_LABEL, statusNote, type AdminOrder } from '~/lib/orders/admin_orders'
+import { STAGE_LABEL, bulkTargets, statusNote, type AdminOrder } from '~/lib/orders/admin_orders'
 import type { StatusTone } from '~/lib/tracking/status'
 
 const FOOTER = 'flex flex-col-reverse justify-end gap-2 sm:flex-row sm:items-center'
@@ -43,7 +43,7 @@ export function StatusDialog({
             setTarget(value)
             setError(null)
           }}
-          options={STAGE_FILTERS.filter((stage) => stage !== 'batal').map((stage) => ({
+          options={bulkTargets(selected).map((stage) => ({
             value: stage,
             label: STAGE_LABEL[stage],
           }))}
@@ -63,6 +63,7 @@ export function StatusDialog({
         </DialogClose>
         <Button
           size="desktop"
+          isDisabled={!bulkTargets(selected).length}
           onPress={() => {
             if (!target) {
               setError('Pilih status tujuan terlebih dulu.')

@@ -1,19 +1,20 @@
 import { BaseTransformer } from '@adonisjs/core/transformers'
 import type { DateTime } from 'luxon'
 import { ActivityActionLabel } from '#enums/activity_enum'
+import { OrderSource, OrderStatus, OrderStatusLabel, PhotoKind } from '#enums/order_enum'
 import {
-  ItemKindLabel,
-  OrderSource,
-  OrderStatus,
-  OrderStatusLabel,
-  PhotoKind,
-} from '#enums/order_enum'
-import { PaymentChannelLabel, PaymentMethodLabel, PaymentStatus } from '#enums/payment_enum'
+  PAYMENT_RECEIVED_STATUSES,
+  PaymentChannelLabel,
+  PaymentMethodLabel,
+  PaymentStatus,
+  PaymentStatusLabel,
+} from '#enums/payment_enum'
 import { Role } from '#enums/role_enum'
 import type ActivityLog from '#models/activity_log'
 import type Order from '#models/order'
 import { formatRupiah } from '#helpers/money'
 import { displayPhone } from '#helpers/phone'
+import { billBreakdown } from '#helpers/bill'
 import { photoUrl } from '#transformers/order_transformer'
 import { SERVICE_ZONE } from '#validators/shared/rules/pickup'
 
@@ -40,6 +41,16 @@ export default class AdminOrderDetailTransformer extends BaseTransformer<Order> 
     const pending = order.payments
       .filter((payment) => payment.status === PaymentStatus.PENDING)
       .at(-1)
+    const otherReceived = order.payments
+      .filter(
+        (payment) =>
+          payment.status !== PaymentStatus.PAID &&
+          PAYMENT_RECEIVED_STATUSES.includes(payment.status)
+      )
+      .map((payment) => ({
+        label: 'QRIS lain diterima',
+        value: `${formatRupiah(payment.amount)} · ${PaymentStatusLabel[payment.status]}${payment.paidAt ? ` · ${stamp(payment.paidAt)}` : ''}`,
+      }))
     const address = order.deliveryAddress ?? order.pickupAddress
     const proof = (kind: PhotoKind) => order.photos.filter((photo) => photo.kind === kind).at(-1)
 
@@ -70,13 +81,7 @@ export default class AdminOrderDetailTransformer extends BaseTransformer<Order> 
       pricedBy: bill
         ? `ditentukan ${bill.decider?.firstName() ?? 'staf'} · ${stamp(bill.createdAt)}`
         : 'belum diperiksa',
-      items: order.items.map((item) => ({
-        name: item.name,
-        category: ItemKindLabel[item.kind],
-        services: (bill?.lines ?? [])
-          .filter((line) => line.orderItemId === item.id)
-          .map((line) => ({ name: line.name, price: line.price })),
-      })),
+      bill: billBreakdown(order),
       payRows: paid
         ? [
             {
@@ -87,6 +92,7 @@ export default class AdminOrderDetailTransformer extends BaseTransformer<Order> 
             { label: 'Dibayar', value: paid.paidAt ? stamp(paid.paidAt) : '—' },
             { label: 'Dicatat oleh', value: paid.recorder?.name ?? 'Otomatis (Midtrans)' },
             ...(paid.note ? [{ label: 'Catatan', value: paid.note }] : []),
+            ...otherReceived,
           ]
         : [
             {
@@ -101,6 +107,7 @@ export default class AdminOrderDetailTransformer extends BaseTransformer<Order> 
                   ? 'Belum dibayar'
                   : 'Belum ditagih',
             },
+            ...otherReceived,
           ],
       isPaid: !!paid,
       paidAmount: paid?.amount ?? bill?.total ?? 0,
